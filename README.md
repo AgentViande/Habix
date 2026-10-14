@@ -169,6 +169,27 @@ Les exécutables générés se trouvent dans le dossier `/release` :
 
 ---
 
+### 🚀 Publication Automatique & Mises à Jour (GitHub Releases)
+
+Habix dispose d'un pipeline complet pour compiler et publier chaque nouvelle version directement sur GitHub :
+
+```bash
+# Pour publier vos modifications en version corrective (1.0.0 -> 1.0.1) :
+npm run push "Description de vos modifications"
+
+# Pour une mise à jour avec de nouvelles fonctionnalités (1.0.0 -> 1.1.0) :
+npm run push:minor "Nouvelles fonctionnalités"
+```
+
+**Fonctionnement automatique du pipeline :**
+1. ✅ **Contrôle qualité** : exécute `npm run build` et valide l'absence de toute erreur de compilation.
+2. 🏷️ **Versioning & Tag** : incrémente la version dans `package.json` et crée le tag Git correspondant.
+3. ⬆️ **Envoi GitHub** : pousse le code et les tags vers [`AgentViande/Habix`](https://github.com/AgentViande/Habix).
+4. 🤖 **GitHub Actions** : prend le relais dans le cloud pour compiler l'application Windows et téléverser `Habix Setup X.Y.Z.exe` et `latest.yml` sur **GitHub Releases**.
+5. 📲 **Auto-Update** : dès qu'une nouvelle version est en ligne, l'application de bureau installée chez les utilisateurs la détecte automatiquement, la télécharge en arrière-plan et propose le redémarrage en un clic !
+
+---
+
 ## 📁 Architecture du Code
 
 ```text

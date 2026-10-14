@@ -1,7 +1,7 @@
 {
   "name": "habix",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Suivi d'habitudes moderne et RPG gamifié",
   "author": "Habix",
   "main": "electron/main.cjs",
@@ -22,7 +22,10 @@
     "icons": "node scripts/generate-icons.js",
     "icons:electron": "node scripts/generate-electron-icons.js",
     "electron:dev": "electron .",
-    "electron:build": "vite build && electron-builder"
+    "electron:build": "vite build && electron-builder",
+    "push": "node scripts/push.js",
+    "push:minor": "node scripts/push.js --minor",
+    "push:major": "node scripts/push.js --major"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",
@@ -77,7 +80,9 @@
       "electron/**/*"
     ],
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "icon": "build/icon.ico"
     },
     "nsis": {
