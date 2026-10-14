@@ -22,11 +22,7 @@
     "icons": "node scripts/generate-icons.js",
     "icons:electron": "node scripts/generate-electron-icons.js",
     "electron:dev": "electron .",
-    "electron:build": "vite build && electron-builder",
-    "changelog": "node scripts/changelog.cjs",
-    "release": "node scripts/release.cjs --patch",
-    "release:minor": "node scripts/release.cjs --minor",
-    "release:major": "node scripts/release.cjs --major"
+    "electron:build": "vite build && electron-builder"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",

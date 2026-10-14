@@ -159,57 +159,13 @@ L'application est accessible immédiatement sur [http://localhost:5173/](http://
 
 ### 💻 Application de Bureau Windows (Electron)
 
-Habix est empaqueté en application de bureau native Windows avec installateur NSIS et système de mise à jour automatique :
+Habix peut être empaqueté en application de bureau native Windows indépendante :
 ```bash
 npm run electron:build
 ```
-L'exécutable généré se trouve dans le dossier `/release` :
-- **`Habix Setup 1.0.0.exe`** : Installateur complet NSIS (sélection du dossier, raccourcis Bureau et Menu Démarrer, et auto-update).
-
----
-
-### 🔄 Publier une mise à jour automatique
-
-Habix intègre un pipeline de publication entièrement automatisé via **GitHub Releases** et **GitHub Actions**.
-
-#### 1. Format des commits recommandés
-Pour que les patch notes soient automatiquement triés et classés dans la release et dans l'application, préfixez vos messages de commit selon la convention :
-- `feat: ...` : **✨ Nouveautés** (ex. : `feat: ajout du mode statistiques avancées`)
-- `fix: ...` : **🐛 Corrections** (ex. : `fix: correction du décalage d'affichage du streak`)
-- `perf: ...` : **⚡ Performance** (ex. : `perf: optimisation du rendu de la heatmap`)
-- `ui: ...` : **🎨 Interface** (ex. : `ui: amélioration des contrastes en mode sombre`)
-- `refactor: ...` ou `chore: ...` : **🔧 Autres changements**
-
-#### 2. Déclencher une mise à jour en une seule commande
-Une fois vos modifications prêtes, lancez simplement :
-```bash
-# Pour une mise à jour corrective (patch : 1.0.0 -> 1.0.1)
-npm run release -- "feat: ajout du filtre par catégorie dans les stats"
-
-# Pour une mise à jour mineure avec nouvelles fonctionnalités (minor : 1.0.0 -> 1.1.0)
-npm run release:minor -- "feat: nouveaux badges et défis communautaires"
-
-# Pour une mise à jour majeure (major : 1.0.0 -> 2.0.0)
-npm run release:major -- "feat: refonte majeure du moteur de progression"
-```
-
-#### 3. Ce que le script effectue automatiquement :
-1. ✅ **Validation du build** : exécute `npm run build` et stoppe immédiatement en cas d'erreur.
-2. 📦 **Commit Git** : enregistre vos modifications avec le message fourni (`git add -A && git commit`).
-3. 🏷️ **Montée de version & Tag** : incrémente `package.json` et crée le tag Git correspondant (`v1.0.1`).
-4. 🚀 **Envoi sur GitHub** : pousse le code et le tag sur le dépôt (`git push --follow-tags`).
-5. 🤖 **GitHub Actions** prend le relais :
-   - Compile l'application sous Windows (`windows-latest`).
-   - Analyse l'historique Git via `scripts/changelog.cjs` pour extraire tous les commits depuis la version précédente.
-   - Génère automatiquement les **patch notes** en français classés par catégorie.
-   - Met à jour [CHANGELOG.md](CHANGELOG.md) et la release GitHub.
-   - Publie l'installateur `Habix Setup X.Y.Z.exe` sur **GitHub Releases**.
-6. 📲 **Dans l'application des utilisateurs** :
-   - L'application détecte la mise à jour (au lancement ou toutes les 4h).
-   - Un toast élégant s'affiche : *"Mise à jour vX.Y.Z disponible"*.
-   - Un bouton *"Voir les nouveautés"* affiche directement les patch notes rédigés.
-   - Le téléchargement s'effectue en arrière-plan avec barre de progression.
-   - Dès la fin du téléchargement, un bouton *"Redémarrer pour installer"* applique la mise à jour en un clic.
+Les exécutables générés se trouvent dans le dossier `/release` :
+- **`Habix Setup 1.0.0.exe`** : Installateur complet NSIS (sélection du dossier d'installation, raccourcis Bureau et Menu Démarrer, désinstallateur propre).
+- **`release/win-unpacked/Habix.exe`** : Version décompressée pour exécution immédiate.
 
 ---
 

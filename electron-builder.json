@@ -19,13 +19,5 @@
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
     "shortcutName": "Habix"
-  },
-  "publish": [
-    {
-      "provider": "github",
-      "owner": "AgentViande",
-      "repo": "Habix",
-      "releaseType": "release"
-    }
-  ]
+  }
 }
