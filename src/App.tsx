@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter, HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 const isElectron =
@@ -19,6 +19,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { BadgeUnlockModal } from './components/gamification/BadgeUnlockModal';
 import { LevelUpModal } from './components/gamification/LevelUpModal';
 import { UpdateToast } from './components/ui/UpdateToast';
+import { StartupSplash } from './components/ui/StartupSplash';
 import { useHabitStore } from './stores/useHabitStore';
 import { useGamificationStore } from './stores/useGamificationStore';
 import { useSettingsStore } from './stores/useSettingsStore';
@@ -27,6 +28,7 @@ import { useChallengeStore } from './stores/useChallengeStore';
 import { seedDefaultData } from './db/seed';
 
 export const App: React.FC = () => {
+  const [isInitializing, setIsInitializing] = useState(true);
   const { loadAll } = useHabitStore();
   const { loadGamification } = useGamificationStore();
   const { settings, loadSettings } = useSettingsStore();
@@ -43,6 +45,7 @@ export const App: React.FC = () => {
         loadMoods(),
         loadChallenges(),
       ]);
+      setIsInitializing(false);
     }
     init();
   }, [loadAll, loadGamification, loadSettings, loadMoods, loadChallenges]);
@@ -73,10 +76,11 @@ export const App: React.FC = () => {
         </Routes>
       </AppLayout>
 
-      {/* Global Gamification & Update Modals */}
+      {/* Global Gamification, Update Modals & Startup Splash */}
       <BadgeUnlockModal />
       <LevelUpModal />
       <UpdateToast />
+      <StartupSplash isLoading={isInitializing} />
     </Router>
   );
 };
