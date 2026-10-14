@@ -1,0 +1,103 @@
+{
+  "name": "habix",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Suivi d'habitudes moderne et RPG gamifié",
+  "author": "Habix",
+  "main": "electron/main.cjs",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "icons": "node scripts/generate-icons.js",
+    "icons:electron": "node scripts/generate-electron-icons.js",
+    "electron:dev": "electron .",
+    "electron:build": "vite build && electron-builder",
+    "changelog": "node scripts/changelog.cjs",
+    "release": "node scripts/release.cjs --patch",
+    "release:minor": "node scripts/release.cjs --minor",
+    "release:major": "node scripts/release.cjs --major"
+  },
+  "dependencies": {
+    "canvas-confetti": "^1.9.4",
+    "clsx": "^2.1.1",
+    "date-fns": "^3.6.0",
+    "dexie": "^4.0.8",
+    "dexie-react-hooks": "^1.1.7",
+    "electron-updater": "^6.8.9",
+    "framer-motion": "^14.2.0",
+    "lucide-react": "^0.462.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.27.0",
+    "recharts": "^2.13.3",
+    "tailwind-merge": "^2.5.4",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.0.1",
+    "@types/canvas-confetti": "^1.9.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@typescript-eslint/eslint-plugin": "^8.71.2",
+    "@typescript-eslint/parser": "^8.71.2",
+    "@vitejs/plugin-react": "^4.3.3",
+    "@vitest/coverage-v8": "^2.1.4",
+    "autoprefixer": "^10.4.20",
+    "electron": "^44.7.2",
+    "electron-builder": "^26.15.3",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "fake-indexeddb": "^6.0.0",
+    "jsdom": "^25.0.1",
+    "postcss": "^8.4.47",
+    "prettier": "^3.9.10",
+    "tailwindcss": "^3.4.14",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10",
+    "vite-plugin-pwa": "^0.21.1",
+    "vitest": "^2.1.4"
+  },
+  "build": {
+    "appId": "com.habix.app",
+    "productName": "Habix",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "win": {
+      "target": ["nsis"],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Habix"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "AgentViande",
+        "repo": "Habix",
+        "releaseType": "release"
+      }
+    ]
+  }
+}

@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code (with full commit history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Generate patch notes
+        run: node scripts/changelog.cjs
+
+      - name: Build & Publish Electron Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --publish always
+
+      - name: Update GitHub Release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "$env:GITHUB_REF_NAME" --notes-file notes.md
+
+      - name: Commit and push updated CHANGELOG.md to main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          $status = git status --porcelain CHANGELOG.md
+          if ($status) {
+            git add CHANGELOG.md
+            git commit -m "chore: update changelog [skip ci]"
+            git push origin HEAD:main
+          } else {
+            Write-Host "CHANGELOG.md unchanged, skipping commit."
+          }

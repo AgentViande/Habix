@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Production builds & artifacts
+dist/
+release/
+coverage/
+
+# Environment files & secrets
+.env
+.env.*
+*.pem
+*.key
+
+# System & IDE files
+.DS_Store
+Thumbs.db
+*.tsbuildinfo
+.system_generated/
