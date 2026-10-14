@@ -7,7 +7,11 @@ export class BadgeRepository {
   }
 
   async getByBadgeId(badgeId: string): Promise<UnlockedBadge | undefined> {
-    return db.unlockedBadges.where('badgeId').equals(badgeId).first();
+    const badge = await db.unlockedBadges.where('badgeId').equals(badgeId).first();
+    if (!badge && badgeId === 'comp_1') {
+      return db.unlockedBadges.where('badgeId').equals('first_step').first();
+    }
+    return badge;
   }
 
   async isUnlocked(badgeId: string): Promise<boolean> {

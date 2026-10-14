@@ -62,6 +62,26 @@ export function evaluateNewBadges(context: BadgeEvaluationContext) {
   if (canUnlock('streak_90') && maxBestStreak >= 90) newlyUnlocked.push('streak_90');
   if (canUnlock('streak_365') && maxBestStreak >= 365) newlyUnlocked.push('streak_365');
 
+  // 2b. Regularity
+  const activeHabits = habits.filter((h) => !h.isArchived);
+  if (activeHabits.length > 0) {
+    const allHave7DayStreak = activeHabits.every((h) => {
+      const hComps = completions.filter((c) => c.habitId === h.id);
+      const hFreezes = freezeDays.filter((f) => f.habitId === h.id);
+      const s = calculateStreak(h, hComps, hFreezes, { today, weekStartsOn });
+      return s.best >= 7;
+    });
+    if (canUnlock('perfect_week') && allHave7DayStreak) newlyUnlocked.push('perfect_week');
+
+    const allHave30DayStreak = activeHabits.every((h) => {
+      const hComps = completions.filter((c) => c.habitId === h.id);
+      const hFreezes = freezeDays.filter((f) => f.habitId === h.id);
+      const s = calculateStreak(h, hComps, hFreezes, { today, weekStartsOn });
+      return s.best >= 30;
+    });
+    if (canUnlock('perfect_month') && allHave30DayStreak) newlyUnlocked.push('perfect_month');
+  }
+
   // 3. Level
   if (canUnlock('level_5') && currentLevel >= 5) newlyUnlocked.push('level_5');
   if (canUnlock('level_10') && currentLevel >= 10) newlyUnlocked.push('level_10');
@@ -84,7 +104,6 @@ export function evaluateNewBadges(context: BadgeEvaluationContext) {
   if (canUnlock('night_owl') && nightOwlCount >= 50) newlyUnlocked.push('night_owl');
 
   // 5. Habits diversity
-  const activeHabits = habits.filter((h) => !h.isArchived);
   if (canUnlock('active_5') && activeHabits.length >= 5) newlyUnlocked.push('active_5');
   if (canUnlock('habits_10') && habits.length >= 10) newlyUnlocked.push('habits_10');
 

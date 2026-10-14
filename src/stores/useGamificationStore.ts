@@ -11,6 +11,7 @@ export interface GamificationStoreState {
   profile: UserProfile | null;
   unlockedBadges: UnlockedBadge[];
   pendingBadge: BadgeDefinition | null;
+  pendingBadges: BadgeDefinition[];
   levelUpModal: number | null;
   isLoading: boolean;
 
@@ -32,6 +33,7 @@ export const useGamificationStore = create<GamificationStoreState>((set, get) =>
   profile: null,
   unlockedBadges: [],
   pendingBadge: null,
+  pendingBadges: [],
   levelUpModal: null,
   isLoading: false,
 
@@ -54,7 +56,16 @@ export const useGamificationStore = create<GamificationStoreState>((set, get) =>
       await db.userProfile.put(profile);
     }
 
-    const unlockedBadges = await badgeRepository.getAll();
+    let unlockedBadges = await badgeRepository.getAll();
+
+    // Migrate legacy first_step to comp_1 if present
+    const hasFirstStep = unlockedBadges.some((b) => b.badgeId === 'first_step');
+    const hasComp1 = unlockedBadges.some((b) => b.badgeId === 'comp_1');
+    if (hasFirstStep && !hasComp1) {
+      await badgeRepository.unlock('comp_1');
+      unlockedBadges = await badgeRepository.getAll();
+    }
+
     set({ profile, unlockedBadges, isLoading: false });
   },
 
@@ -108,11 +119,22 @@ export const useGamificationStore = create<GamificationStoreState>((set, get) =>
   },
 
   isBadgeUnlocked: (badgeId: string) => {
-    return get().unlockedBadges.some((b) => b.badgeId === badgeId);
+    return get().unlockedBadges.some(
+      (b) => b.badgeId === badgeId || (badgeId === 'comp_1' && b.badgeId === 'first_step')
+    );
   },
 
   dismissBadgeUnlock: () => {
-    set({ pendingBadge: null });
+    const queue = get().pendingBadges;
+    if (queue.length > 1) {
+      const nextQueue = queue.slice(1);
+      set({
+        pendingBadges: nextQueue,
+        pendingBadge: nextQueue[0],
+      });
+    } else {
+      set({ pendingBadges: [], pendingBadge: null });
+    }
   },
 
   dismissLevelUp: () => {
@@ -145,13 +167,21 @@ export const useGamificationStore = create<GamificationStoreState>((set, get) =>
   },
 
   checkBadges: async (context) => {
-    const state = get();
-    if (!state.profile) return [];
+    let state = get();
+    if (!state.profile) {
+      await get().loadGamification();
+      state = get();
+    }
 
+    const currentLevel = state.profile?.currentLevel ?? 1;
     const unlockedSet = new Set(state.unlockedBadges.map((b) => b.badgeId));
+    if (unlockedSet.has('first_step')) {
+      unlockedSet.add('comp_1');
+    }
+
     const newBadges = evaluateNewBadges({
       ...context,
-      currentLevel: state.profile.currentLevel,
+      currentLevel,
       unlockedBadgeIds: unlockedSet,
     });
 
@@ -160,9 +190,13 @@ export const useGamificationStore = create<GamificationStoreState>((set, get) =>
         await badgeRepository.unlock(badge.id);
       }
       const updatedUnlocked = await badgeRepository.getAll();
-      set({
-        unlockedBadges: updatedUnlocked,
-        pendingBadge: newBadges[0],
+      set((prev) => {
+        const queue = [...prev.pendingBadges, ...newBadges];
+        return {
+          unlockedBadges: updatedUnlocked,
+          pendingBadges: queue,
+          pendingBadge: prev.pendingBadge || queue[0],
+        };
       });
       triggerLevelUpConfetti();
     }

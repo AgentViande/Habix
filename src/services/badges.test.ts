@@ -134,4 +134,24 @@ describe('Badges Evaluation Service (SPEC.md §7.3)', () => {
 
     expect(badges.some((b) => b.id === 'active_5')).toBe(true);
   });
+
+  it('unlocks freeze badges (freeze_1, freeze_master)', () => {
+    const habit = createMockHabit('h1');
+    const badges = evaluateNewBadges({
+      habits: [habit],
+      completions: [],
+      freezeDays: [
+        { id: 'f1', habitId: 'h1', date: '2026-10-10', createdAt: new Date() },
+      ],
+      moods: [],
+      currentLevel: 1,
+      challenges: [],
+      unlockedBadgeIds: new Set(),
+      today: '2026-10-14',
+      weekStartsOn: 1,
+    });
+
+    expect(badges.some((b) => b.id === 'freeze_1')).toBe(true);
+    expect(badges.some((b) => b.id === 'freeze_master')).toBe(false);
+  });
 });
