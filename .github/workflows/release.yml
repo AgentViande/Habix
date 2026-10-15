@@ -42,7 +42,17 @@ jobs:
           echo "Publishing release version $VERSION"
           echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
 
+      - name: Clean orphan & duplicate releases (Pre-publish)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/clean-duplicate-releases.js
+
       - name: Package Electron & Publish GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx electron-builder --publish always
+
+      - name: Clean orphan & duplicate releases (Post-publish)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/clean-duplicate-releases.js
