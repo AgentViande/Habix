@@ -1,7 +1,7 @@
 {
   "name": "habix",
   "private": true,
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Suivi d'habitudes moderne et RPG gamifié",
   "author": "Habix",
   "main": "electron/main.cjs",
@@ -21,6 +21,7 @@
     "test:coverage": "vitest run --coverage",
     "icons": "node scripts/generate-all-icons.js",
     "icons:electron": "node scripts/generate-all-icons.js",
+    "benchmark": "node scripts/seed-benchmark.js",
     "electron:dev": "electron .",
     "electron:build": "vite build && electron-builder",
     "push": "node scripts/push.js",

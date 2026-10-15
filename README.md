@@ -8,7 +8,7 @@
 [![React](https://img.shields.io/badge/React-18.3-61dafb.svg?logo=react&logoColor=black)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-5.4-646cff.svg?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.4-38b2ac.svg?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![Vitest Tests](https://img.shields.io/badge/Tests-63%20passed-brightgreen.svg?logo=vitest&logoColor=white)](https://vitest.dev/)
+[![Vitest Tests](https://img.shields.io/badge/Tests-88%20passed-brightgreen.svg?logo=vitest&logoColor=white)](https://vitest.dev/)
 [![Dexie IndexedDB](https://img.shields.io/badge/Dexie.js-IndexedDB%20Local-yellow.svg)](https://dexie.org/)
 [![PWA Ready](https://img.shields.io/badge/PWA-Installable%20%26%20Offline-orange.svg)](https://developer.mozilla.org/fr/docs/Web/Progressive_web_apps)
 

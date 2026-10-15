@@ -6,6 +6,7 @@ import { useMoodStore } from '../stores/useMoodStore';
 import { useChallengeStore } from '../stores/useChallengeStore';
 import { BADGE_DEFINITIONS } from '../constants/badges';
 import { getTodayLocal } from '../lib/date-utils';
+import { getLevelInfo } from '../services/xp';
 import { Sparkles, Trophy, Award, Lock, Check, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -63,7 +64,8 @@ export const ProfilePage: React.FC = () => {
 
   const currentLevel = profile?.currentLevel || 1;
   const totalXP = profile?.totalXP || 0;
-  const xpInCurrentLevel = totalXP % 100;
+  const levelInfo = getLevelInfo(totalXP);
+  const xpRemaining = Math.max(0, levelInfo.xpForNextLevel - levelInfo.currentLevelXP);
   const currentTitle = profile?.selectedTitle || AVAILABLE_TITLES[0];
 
   // Map unlocked badges for instant lookup, supporting legacy aliases
@@ -133,19 +135,21 @@ export const ProfilePage: React.FC = () => {
                   <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Progression du niveau
                 </span>
                 <span className="tabular-nums font-bold text-[var(--text-primary)]">
-                  {xpInCurrentLevel} / 100 XP
+                  {levelInfo.currentLevelXP} / {levelInfo.xpForNextLevel} XP
                 </span>
               </div>
               <div className="w-full bg-[var(--bg-tertiary)] h-3 rounded-full overflow-hidden">
                 <div
                   className="bg-gradient-to-r from-[var(--xp-gradient-start)] to-[var(--xp-gradient-end)] h-full transition-all duration-500 rounded-full"
-                  style={{ width: `${xpInCurrentLevel}%` }}
+                  style={{ width: `${levelInfo.progressPercent}%` }}
                 />
               </div>
               <div className="flex justify-between text-[11px] text-[var(--text-muted)] mt-1.5">
                 <span>Total accumulé : {totalXP} XP</span>
                 <span>
-                  Encore {100 - xpInCurrentLevel} XP avant le Niv. {currentLevel + 1}
+                  {currentLevel >= 99
+                    ? 'Niveau maximum atteint ! 🏆'
+                    : `Encore ${xpRemaining} XP avant le Niv. ${currentLevel + 1}`}
                 </span>
               </div>
             </div>

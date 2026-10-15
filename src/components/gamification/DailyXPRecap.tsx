@@ -81,17 +81,19 @@ export const DailyXPRecap: React.FC<DailyXPRecapProps> = ({
   // Otherwise estimate from completed habits today + perfect day bonus.
   const recordedXPSum = xpEvents.reduce((acc, ev) => acc + (ev.amount || 0), 0);
 
-  const estimatedXP = completedHabitsToday.reduce((acc, h) => {
+  const estimatedHabitsXP = completedHabitsToday.reduce((acc, h) => {
     const hComps = completions.filter((c) => c.habitId === h.id);
     const hFreezes = freezeDays.filter((f) => f.habitId === h.id);
     const streak = calculateStreak(h, hComps, hFreezes, { today, weekStartsOn });
     const gain = calculateXPGain({
       difficulty: h.difficulty,
       currentStreak: streak.current,
-      isPerfectDay: isAllDone,
+      isPerfectDay: false,
     });
     return acc + gain.totalXP;
   }, 0);
+
+  const estimatedXP = estimatedHabitsXP + (isAllDone ? 50 : 0);
 
   const totalTodayXP = recordedXPSum > 0 ? recordedXPSum : estimatedXP;
 
@@ -183,7 +185,7 @@ export const DailyXPRecap: React.FC<DailyXPRecapProps> = ({
               : calculateXPGain({
                   difficulty: h.difficulty,
                   currentStreak: streak.current,
-                  isPerfectDay: isAllDone,
+                  isPerfectDay: false,
                 }).totalXP;
 
             return (

@@ -11,8 +11,16 @@ export const LevelUpModal: React.FC = () => {
   useEffect(() => {
     if (levelUpModal !== null) {
       sounds.playLevelUp();
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          dismissLevelUp();
+        }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
     }
-  }, [levelUpModal]);
+  }, [levelUpModal, dismissLevelUp]);
 
   if (levelUpModal === null) return null;
 
@@ -26,15 +34,19 @@ export const LevelUpModal: React.FC = () => {
           exit={{ opacity: 0 }}
           className="fixed inset-0 bg-black/80 backdrop-blur-md"
           onClick={dismissLevelUp}
+          aria-hidden="true"
         />
 
         {/* Modal Content */}
         <motion.div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Célébration du passage au niveau supérieur"
           initial={{ opacity: 0, scale: 0.8, y: 30 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 10 }}
           transition={{ type: 'spring', damping: 20, stiffness: 280 }}
-          className="relative w-full max-w-sm bg-[var(--bg-elevated)] border border-indigo-500/40 rounded-3xl p-6 sm:p-7 text-center shadow-2xl shadow-indigo-500/20 z-10 overflow-hidden"
+          className="relative w-full max-w-sm bg-[var(--bg-elevated)] border border-indigo-500/40 rounded-3xl p-6 sm:p-7 text-center shadow-2xl shadow-indigo-500/20 z-10 overflow-hidden outline-none"
         >
           {/* Luminous Pulsing Glow */}
           <motion.div

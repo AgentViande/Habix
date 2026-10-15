@@ -1,8 +1,15 @@
 import confetti from 'canvas-confetti';
+import { useSettingsStore } from '../stores/useSettingsStore';
 
-export function triggerCompletionConfetti(originX = 0.5, originY = 0.5) {
-  // Respect reduced motion
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+function areAnimationsAllowed(): boolean {
+  if (typeof window === 'undefined') return false;
+  const isReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const enabledInSettings = useSettingsStore.getState().settings.animationsEnabled ?? true;
+  return enabledInSettings && !isReducedMotion;
+}
+
+export function triggerCompletionConfetti(originX = 0.5, originY = 0.5): void {
+  if (!areAnimationsAllowed()) {
     return;
   }
 
@@ -20,8 +27,8 @@ export function triggerCompletionConfetti(originX = 0.5, originY = 0.5) {
   });
 }
 
-export function triggerLevelUpConfetti() {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+export function triggerLevelUpConfetti(): void {
+  if (!areAnimationsAllowed()) {
     return;
   }
 
@@ -48,4 +55,12 @@ export function triggerLevelUpConfetti() {
       requestAnimationFrame(frame);
     }
   })();
+}
+
+export function resetConfetti(): void {
+  try {
+    confetti.reset();
+  } catch {
+    // Ignore if canvas already disposed
+  }
 }

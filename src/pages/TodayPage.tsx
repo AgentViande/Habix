@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useHabitStore } from '../stores/useHabitStore';
 import { useGamificationStore } from '../stores/useGamificationStore';
@@ -63,6 +63,7 @@ export const TodayPage: React.FC = () => {
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [numericModalHabit, setNumericModalHabit] = useState<Habit | null>(null);
   const [isMoodModalOpen, setIsMoodModalOpen] = useState(false);
+  const pendingTogglesRef = useRef(new Set<string>());
 
   useEffect(() => {
     const handleOpenMood = () => setIsMoodModalOpen(true);
@@ -96,12 +97,20 @@ export const TodayPage: React.FC = () => {
 
       if (habit.frequencyType === 'weekly_fixed') {
         const days = (habit.frequencyConfig as { days: number[] }).days || [];
-        return days.includes(todayDow);
+        if (!days.includes(todayDow)) return false;
+      }
+
+      // If today is a rest day, only keep if already completed today
+      if (habit.restDays && habit.restDays.includes(todayDow)) {
+        const hasTodayComp = completions.some(
+          (c) => c.habitId === habit.id && c.date === today && c.value >= 1
+        );
+        if (!hasTodayComp) return false;
       }
 
       return true;
     });
-  }, [activeHabits, selectedCategory, todayDow]);
+  }, [activeHabits, selectedCategory, todayDow, completions, today]);
 
   // Pre-indexed Maps for O(1) lookups instead of repeated O(N) array scans
   const { completionsByHabit, freezeDaysByHabit, categoriesMap } = useMemo(() => {
@@ -165,42 +174,52 @@ export const TodayPage: React.FC = () => {
 
   const handleToggle = useCallback(
     async (habit: Habit) => {
-      const isCompleted = completions.some((c) => c.habitId === habit.id && c.date === today);
-      const nowTime = getLocalTime(settings.timezone);
+      if (pendingTogglesRef.current.has(habit.id)) return;
+      pendingTogglesRef.current.add(habit.id);
 
-      await toggleCompletion(habit.id, today);
+      try {
+        const isCompleted = completions.some((c) => c.habitId === habit.id && c.date === today);
+        const nowTime = getLocalTime(settings.timezone);
 
-      if (!isCompleted) {
-        // ANTI-EXPLOIT: Check if XP was already awarded today for this habit
-        const alreadyEarned = isHabitAwardedToday(habit.id);
-        const willBeAllDone = completedTodayCount + 1 === totalExpected;
+        await toggleCompletion(habit.id, today);
 
-        if (!alreadyEarned) {
-          const habitComps = completionsByHabit.get(habit.id) || [];
-          const habitFreezes = freezeDaysByHabit.get(habit.id) || [];
-          const streak = calculateStreak(habit, habitComps, habitFreezes, { today, weekStartsOn });
+        if (!isCompleted) {
+          // ANTI-EXPLOIT: Check if XP was already awarded today for this habit
+          const alreadyEarned = isHabitAwardedToday(habit.id, today);
+          const willBeAllDone = completedTodayCount + 1 === totalExpected;
 
-          const gain = calculateXPGain({
-            difficulty: habit.difficulty,
-            currentStreak: streak.current,
-            completedAtTime: nowTime,
-            isPerfectDay: willBeAllDone,
-          });
+          if (!alreadyEarned) {
+            const habitComps = completionsByHabit.get(habit.id) || [];
+            const habitFreezes = freezeDaysByHabit.get(habit.id) || [];
+            const streak = calculateStreak(habit, habitComps, habitFreezes, {
+              today,
+              weekStartsOn,
+            });
 
-          await addXP(gain.totalXP, {
-            date: today,
-            habitId: habit.id,
-            habitName: habit.name,
-            reason: willBeAllDone ? 'perfect_day' : 'habit_completion',
-          });
+            const gain = calculateXPGain({
+              difficulty: habit.difficulty,
+              currentStreak: streak.current,
+              completedAtTime: nowTime,
+              isPerfectDay: willBeAllDone,
+            });
+
+            await addXP(gain.totalXP, {
+              date: today,
+              habitId: habit.id,
+              habitName: habit.name,
+              reason: willBeAllDone ? 'perfect_day' : 'habit_completion',
+            });
+          }
+
+          await updateChallengeProgress(habit.id, today, true, false);
+
+          if (willBeAllDone) {
+            sounds.playAllDone();
+            triggerLevelUpConfetti();
+          }
         }
-
-        await updateChallengeProgress(habit.id, today, true, false);
-
-        if (willBeAllDone) {
-          sounds.playAllDone();
-          triggerLevelUpConfetti();
-        }
+      } finally {
+        pendingTogglesRef.current.delete(habit.id);
       }
     },
     [

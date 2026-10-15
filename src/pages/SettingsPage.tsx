@@ -226,17 +226,17 @@ export const SettingsPage: React.FC = () => {
           await db.unlockedBadges.clear();
           await db.xpEvents.clear();
 
-          if (sanitized.habits.length) await db.habits.bulkAdd(sanitized.habits);
-          if (sanitized.completions.length) await db.completions.bulkAdd(sanitized.completions);
-          if (sanitized.freezeDays.length) await db.freezeDays.bulkAdd(sanitized.freezeDays);
-          if (sanitized.categories.length) await db.categories.bulkAdd(sanitized.categories);
-          if (sanitized.moods.length) await db.moods.bulkAdd(sanitized.moods);
-          if (sanitized.challenges.length) await db.challenges.bulkAdd(sanitized.challenges);
+          if (sanitized.habits.length) await db.habits.bulkPut(sanitized.habits);
+          if (sanitized.completions.length) await db.completions.bulkPut(sanitized.completions);
+          if (sanitized.freezeDays.length) await db.freezeDays.bulkPut(sanitized.freezeDays);
+          if (sanitized.categories.length) await db.categories.bulkPut(sanitized.categories);
+          if (sanitized.moods.length) await db.moods.bulkPut(sanitized.moods);
+          if (sanitized.challenges.length) await db.challenges.bulkPut(sanitized.challenges);
           if (sanitized.unlockedBadges.length)
-            await db.unlockedBadges.bulkAdd(sanitized.unlockedBadges);
+            await db.unlockedBadges.bulkPut(sanitized.unlockedBadges);
           if (sanitized.userProfile?.length) await db.userProfile.bulkPut(sanitized.userProfile);
           if (sanitized.settings?.length) await db.settings.bulkPut(sanitized.settings);
-          if (sanitized.xpEvents?.length) await db.xpEvents.bulkAdd(sanitized.xpEvents);
+          if (sanitized.xpEvents?.length) await db.xpEvents.bulkPut(sanitized.xpEvents);
         }
       );
 

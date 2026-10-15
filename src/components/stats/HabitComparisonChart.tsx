@@ -4,6 +4,7 @@ import type { Completion } from '../../models/completion';
 import type { FreezeDay } from '../../models/freeze-day';
 import type { Category } from '../../models/category';
 import { calculateStreak } from '../../lib/streaks';
+import { subtractDays } from '../../lib/date-utils';
 import {
   ResponsiveContainer,
   BarChart,
@@ -38,38 +39,63 @@ export const HabitComparisonChart: React.FC<HabitComparisonChartProps> = ({
 
   const activeHabits = useMemo(() => habits.filter((h) => !h.isArchived), [habits]);
 
+  // Pre-index collections for O(1) lookups
+  const { completionsByHabit, freezeDaysByHabit, categoriesMap } = useMemo(() => {
+    const cMap = new Map<string, Completion[]>();
+    for (const c of completions) {
+      const list = cMap.get(c.habitId);
+      if (list) list.push(c);
+      else cMap.set(c.habitId, [c]);
+    }
+    const fMap = new Map<string, FreezeDay[]>();
+    for (const f of freezeDays) {
+      const list = fMap.get(f.habitId);
+      if (list) list.push(f);
+      else fMap.set(f.habitId, [f]);
+    }
+    const catMap = new Map<string, Category>();
+    for (const cat of categories) {
+      catMap.set(cat.id, cat);
+    }
+    return { completionsByHabit: cMap, freezeDaysByHabit: fMap, categoriesMap: catMap };
+  }, [completions, freezeDays, categories]);
+
+  // Compute habit metrics (independent of metric sort)
+  const baseMetrics = useMemo(() => {
+    const last30Start = subtractDays(today, 30);
+
+    return activeHabits.map((habit) => {
+      const habitComps = completionsByHabit.get(habit.id) || [];
+      const habitFreezes = freezeDaysByHabit.get(habit.id) || [];
+      const streak = calculateStreak(habit, habitComps, habitFreezes, { today, weekStartsOn });
+      const category = habit.categoryId ? categoriesMap.get(habit.categoryId) : undefined;
+
+      const compsLast30 = habitComps.filter((c) => c.date >= last30Start).length;
+      const rate30 = Math.min(100, Math.round((compsLast30 / 30) * 100));
+
+      return {
+        id: habit.id,
+        name: `${habit.icon || '⚡'} ${habit.name}`,
+        rawName: habit.name,
+        icon: habit.icon || '⚡',
+        color: habit.color || '#818cf8',
+        categoryName: category?.name || 'Général',
+        total: habitComps.length,
+        streak: streak.current,
+        bestStreak: streak.best,
+        rate: rate30,
+      };
+    });
+  }, [activeHabits, completionsByHabit, freezeDaysByHabit, categoriesMap, today, weekStartsOn]);
+
+  // Fast sorting based on selected metric
   const chartData = useMemo(() => {
-    return activeHabits
-      .map((habit) => {
-        const habitComps = completions.filter((c) => c.habitId === habit.id);
-        const habitFreezes = freezeDays.filter((f) => f.habitId === habit.id);
-        const streak = calculateStreak(habit, habitComps, habitFreezes, { today, weekStartsOn });
-        const category = categories.find((c) => c.id === habit.categoryId);
-
-        // Estimate completion rate over last 30 days
-        const last30Start = new Date(Date.now() - 30 * 86400000).toISOString().substring(0, 10);
-        const compsLast30 = habitComps.filter((c) => c.date >= last30Start).length;
-        const rate30 = Math.min(100, Math.round((compsLast30 / 30) * 100));
-
-        return {
-          id: habit.id,
-          name: `${habit.icon || '⚡'} ${habit.name}`,
-          rawName: habit.name,
-          icon: habit.icon || '⚡',
-          color: habit.color || '#818cf8',
-          categoryName: category?.name || 'Général',
-          total: habitComps.length,
-          streak: streak.current,
-          bestStreak: streak.best,
-          rate: rate30,
-        };
-      })
-      .sort((a, b) => {
-        if (metric === 'streak') return b.streak - a.streak;
-        if (metric === 'rate') return b.rate - a.rate;
-        return b.total - a.total;
-      });
-  }, [activeHabits, completions, freezeDays, categories, today, weekStartsOn, metric]);
+    return [...baseMetrics].sort((a, b) => {
+      if (metric === 'streak') return b.streak - a.streak;
+      if (metric === 'rate') return b.rate - a.rate;
+      return b.total - a.total;
+    });
+  }, [baseMetrics, metric]);
 
   const getMetricLabel = () => {
     if (metric === 'streak') return 'Streak actuel (jours)';

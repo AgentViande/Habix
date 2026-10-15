@@ -81,18 +81,23 @@ if (!gotTheLock) {
       });
 
       // Initial check after window is ready
-      setTimeout(() => {
+      const initialTimer = setTimeout(() => {
         autoUpdater.checkForUpdates().catch((err) => {
           console.warn('[AutoUpdater] Initial check error:', err?.message || err);
         });
       }, 3500);
 
       // Periodic check every 4 hours
-      setInterval(() => {
+      let updaterInterval = setInterval(() => {
         autoUpdater.checkForUpdates().catch((err) => {
           console.warn('[AutoUpdater] Periodic check error:', err?.message || err);
         });
       }, 4 * 60 * 60 * 1000);
+
+      app.on('before-quit', () => {
+        clearTimeout(initialTimer);
+        if (updaterInterval) clearInterval(updaterInterval);
+      });
     }
 
     app.on('activate', () => {
@@ -166,6 +171,21 @@ function createWindow() {
       shell.openExternal(url);
     }
     return { action: 'deny' };
+  });
+
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    // Allow local dev server navigation or file scheme
+    const devServerUrl = process.env.VITE_DEV_SERVER_URL;
+    if (devServerUrl && url.startsWith(devServerUrl)) {
+      return;
+    }
+    if (url.startsWith('file://')) {
+      return;
+    }
+    event.preventDefault();
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      shell.openExternal(url);
+    }
   });
 
   // Load the built app or local dev server

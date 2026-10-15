@@ -15,11 +15,12 @@ export interface GamificationStoreState {
   pendingBadge: BadgeDefinition | null;
   pendingBadges: BadgeDefinition[];
   levelUpModal: number | null;
+  todayAwardedDate: string | null;
   todayAwardedHabitIds: string[];
   isLoading: boolean;
 
   loadGamification: () => Promise<void>;
-  isHabitAwardedToday: (habitId: string) => boolean;
+  isHabitAwardedToday: (habitId: string, forDate?: string) => boolean;
   addXP: (
     amount: number,
     metadata?: { date?: string; habitId?: string; habitName?: string; reason?: XPReason }
@@ -42,11 +43,18 @@ export const useGamificationStore = create<GamificationStoreState>((set, get) =>
   pendingBadge: null,
   pendingBadges: [],
   levelUpModal: null,
+  todayAwardedDate: null,
   todayAwardedHabitIds: [],
   isLoading: false,
 
-  isHabitAwardedToday: (habitId: string) => {
-    return get().todayAwardedHabitIds.includes(habitId);
+  isHabitAwardedToday: (habitId: string, forDate?: string) => {
+    const todayStr = forDate || new Intl.DateTimeFormat('fr-CA').format(new Date());
+    const state = get();
+    // Midnight rollover detection: if the cached date differs from current date, reset cache
+    if (state.todayAwardedDate && state.todayAwardedDate !== todayStr) {
+      return false;
+    }
+    return state.todayAwardedHabitIds.includes(habitId);
   },
 
   loadGamification: async () => {
@@ -94,12 +102,15 @@ export const useGamificationStore = create<GamificationStoreState>((set, get) =>
         if (comp.value >= 1) awardedIdsSet.add(comp.habitId);
       }
     } catch (e) {
-      console.warn('Could not load today XP events:', e);
+      if (import.meta.env.DEV) {
+        console.warn('Could not load today XP events:', e);
+      }
     }
 
     set({
       profile,
       unlockedBadges,
+      todayAwardedDate: todayStr,
       todayAwardedHabitIds: Array.from(awardedIdsSet),
       isLoading: false,
     });
@@ -114,10 +125,18 @@ export const useGamificationStore = create<GamificationStoreState>((set, get) =>
 
     const todayStr = metadata?.date || new Intl.DateTimeFormat('fr-CA').format(new Date());
 
+    // Check midnight rollover: if current date is different from stored date, reset cache
+    const state = get();
+    let currentAwardedList = state.todayAwardedHabitIds;
+    if (state.todayAwardedDate && state.todayAwardedDate !== todayStr) {
+      currentAwardedList = [];
+      set({ todayAwardedDate: todayStr, todayAwardedHabitIds: [] });
+    }
+
     // ANTI-EXPLOIT / INFINITE XP PREVENTION:
     // If habitId is specified, verify it hasn't already been awarded today
     if (metadata?.habitId) {
-      if (get().todayAwardedHabitIds.includes(metadata.habitId)) {
+      if (currentAwardedList.includes(metadata.habitId)) {
         return { newLevel: current.currentLevel, leveledUp: false, alreadyAwarded: true };
       }
 
@@ -131,13 +150,16 @@ export const useGamificationStore = create<GamificationStoreState>((set, get) =>
         if (existingEvent) {
           if (!get().todayAwardedHabitIds.includes(metadata.habitId)) {
             set((prev) => ({
+              todayAwardedDate: todayStr,
               todayAwardedHabitIds: [...prev.todayAwardedHabitIds, metadata.habitId!],
             }));
           }
           return { newLevel: current.currentLevel, leveledUp: false, alreadyAwarded: true };
         }
       } catch (e) {
-        console.warn('Could not query existing xpEvents:', e);
+        if (import.meta.env.DEV) {
+          console.warn('Could not query existing xpEvents:', e);
+        }
       }
     }
 
@@ -155,13 +177,16 @@ export const useGamificationStore = create<GamificationStoreState>((set, get) =>
 
         if (metadata?.habitId) {
           set((prev) => ({
+            todayAwardedDate: todayStr,
             todayAwardedHabitIds: prev.todayAwardedHabitIds.includes(metadata.habitId!)
               ? prev.todayAwardedHabitIds
               : [...prev.todayAwardedHabitIds, metadata.habitId!],
           }));
         }
       } catch (e) {
-        console.warn('Could not record XP event:', e);
+        if (import.meta.env.DEV) {
+          console.warn('Could not record XP event:', e);
+        }
       }
     }
 
@@ -284,7 +309,10 @@ export const useGamificationStore = create<GamificationStoreState>((set, get) =>
       }
       const updatedUnlocked = await badgeRepository.getAll();
       set((prev) => {
-        const queue = [...prev.pendingBadges, ...newBadges];
+        // Prevent duplicate badges in the pending modal queue
+        const existingIds = new Set(prev.pendingBadges.map((b) => b.id));
+        const uniqueNewBadges = newBadges.filter((b) => !existingIds.has(b.id));
+        const queue = [...prev.pendingBadges, ...uniqueNewBadges];
         return {
           unlockedBadges: updatedUnlocked,
           pendingBadges: queue,

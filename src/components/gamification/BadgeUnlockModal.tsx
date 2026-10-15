@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGamificationStore } from '../../stores/useGamificationStore';
 import { Button } from '../ui/Button';
@@ -6,6 +6,18 @@ import { Sparkles, Trophy } from 'lucide-react';
 
 export const BadgeUnlockModal: React.FC = () => {
   const { pendingBadge, levelUpModal, dismissBadgeUnlock } = useGamificationStore();
+
+  useEffect(() => {
+    if (pendingBadge && levelUpModal === null) {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          dismissBadgeUnlock();
+        }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [pendingBadge, levelUpModal, dismissBadgeUnlock]);
 
   // If level up modal is currently active, wait in queue until it is dismissed
   if (levelUpModal !== null || !pendingBadge) return null;
@@ -20,15 +32,19 @@ export const BadgeUnlockModal: React.FC = () => {
           exit={{ opacity: 0 }}
           className="fixed inset-0 bg-black/70 backdrop-blur-md"
           onClick={dismissBadgeUnlock}
+          aria-hidden="true"
         />
 
         {/* Modal Content */}
         <motion.div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Déblocage du trophée : ${pendingBadge.name}`}
           initial={{ opacity: 0, scale: 0.8, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 10 }}
           transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-          className="relative w-full max-w-sm bg-[var(--bg-elevated)] border border-amber-500/40 rounded-3xl p-6 sm:p-7 text-center shadow-2xl shadow-amber-500/10 z-10 overflow-hidden"
+          className="relative w-full max-w-sm bg-[var(--bg-elevated)] border border-amber-500/40 rounded-3xl p-6 sm:p-7 text-center shadow-2xl shadow-amber-500/10 z-10 overflow-hidden outline-none"
         >
           {/* Decorative glow */}
           <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-48 h-48 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />

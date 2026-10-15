@@ -74,6 +74,10 @@ export function validateAndSanitizeBackup(raw: unknown): ValidatedBackupData {
       throw new Error(`Habitude invalide à l'index ${i}: 'id' et 'name' sont obligatoires.`);
     }
 
+    if (validHabitIds.has(id)) {
+      continue; // Skip duplicate habit id
+    }
+
     const sanitizedHabit: Habit = {
       id,
       name: name.slice(0, 100),
@@ -105,6 +109,9 @@ export function validateAndSanitizeBackup(raw: unknown): ValidatedBackupData {
 
   // 2. Sanitize completions
   const validCompletions: Completion[] = [];
+  const seenCompIds = new Set<string>();
+  const seenCompKeys = new Set<string>();
+
   if (Array.isArray(obj.completions)) {
     for (const c of obj.completions) {
       if (!c || typeof c !== 'object') continue;
@@ -113,6 +120,13 @@ export function validateAndSanitizeBackup(raw: unknown): ValidatedBackupData {
       const date = isValidDateString(c.date) ? c.date : null;
 
       if (habitId && date && validHabitIds.has(habitId)) {
+        const compositeKey = `${habitId}:${date}`;
+        if (seenCompIds.has(id) || seenCompKeys.has(compositeKey)) {
+          continue; // Skip duplicate completion
+        }
+        seenCompIds.add(id);
+        seenCompKeys.add(compositeKey);
+
         validCompletions.push({
           id,
           habitId,
@@ -127,11 +141,16 @@ export function validateAndSanitizeBackup(raw: unknown): ValidatedBackupData {
 
   // 3. Sanitize categories
   const validCategories: Category[] = [];
+  const seenCategoryIds = new Set<string>();
+
   if (Array.isArray(obj.categories)) {
     for (let i = 0; i < obj.categories.length; i++) {
       const cat = obj.categories[i];
       if (!cat || typeof cat !== 'object') continue;
       if (typeof cat.id === 'string' && typeof cat.name === 'string') {
+        if (seenCategoryIds.has(cat.id)) continue;
+        seenCategoryIds.add(cat.id);
+
         validCategories.push({
           id: cat.id,
           name: cat.name.slice(0, 60),
@@ -145,6 +164,9 @@ export function validateAndSanitizeBackup(raw: unknown): ValidatedBackupData {
 
   // 4. Sanitize freezeDays
   const validFreezeDays: FreezeDay[] = [];
+  const seenFreezeIds = new Set<string>();
+  const seenFreezeKeys = new Set<string>();
+
   if (Array.isArray(obj.freezeDays)) {
     for (const f of obj.freezeDays) {
       if (!f || typeof f !== 'object') continue;
@@ -153,6 +175,13 @@ export function validateAndSanitizeBackup(raw: unknown): ValidatedBackupData {
       const date = isValidDateString(f.date) ? f.date : null;
 
       if (habitId && date) {
+        const compositeKey = `${habitId}:${date}`;
+        if (seenFreezeIds.has(id) || seenFreezeKeys.has(compositeKey)) {
+          continue;
+        }
+        seenFreezeIds.add(id);
+        seenFreezeKeys.add(compositeKey);
+
         validFreezeDays.push({
           id,
           habitId,
@@ -165,6 +194,8 @@ export function validateAndSanitizeBackup(raw: unknown): ValidatedBackupData {
 
   // 5. Sanitize moods
   const validMoods: MoodEntry[] = [];
+  const seenMoodDates = new Set<string>();
+
   if (Array.isArray(obj.moods)) {
     for (const m of obj.moods) {
       if (!m || typeof m !== 'object') continue;
@@ -173,6 +204,9 @@ export function validateAndSanitizeBackup(raw: unknown): ValidatedBackupData {
       const level = [1, 2, 3, 4, 5].includes(m.level) ? (m.level as 1 | 2 | 3 | 4 | 5) : 3;
 
       if (date) {
+        if (seenMoodDates.has(date)) continue;
+        seenMoodDates.add(date);
+
         validMoods.push({
           id,
           date,
@@ -189,6 +223,8 @@ export function validateAndSanitizeBackup(raw: unknown): ValidatedBackupData {
 
   // 6. Sanitize challenges
   const validChallenges: Challenge[] = [];
+  const seenChallengeIds = new Set<string>();
+
   if (Array.isArray(obj.challenges)) {
     for (const ch of obj.challenges) {
       if (!ch || typeof ch !== 'object') continue;
@@ -201,6 +237,9 @@ export function validateAndSanitizeBackup(raw: unknown): ValidatedBackupData {
         : 'active';
 
       if (habitId && startDate) {
+        if (seenChallengeIds.has(id)) continue;
+        seenChallengeIds.add(id);
+
         validChallenges.push({
           id,
           habitId,
@@ -216,10 +255,15 @@ export function validateAndSanitizeBackup(raw: unknown): ValidatedBackupData {
 
   // 7. Sanitize unlockedBadges
   const validBadges: UnlockedBadge[] = [];
+  const seenBadgeIds = new Set<string>();
+
   if (Array.isArray(obj.unlockedBadges)) {
     for (const b of obj.unlockedBadges) {
       if (!b || typeof b !== 'object') continue;
       if (typeof b.id === 'string' && typeof b.badgeId === 'string') {
+        if (seenBadgeIds.has(b.badgeId)) continue;
+        seenBadgeIds.add(b.badgeId);
+
         validBadges.push({
           id: b.id,
           badgeId: b.badgeId,
@@ -290,10 +334,15 @@ export function validateAndSanitizeBackup(raw: unknown): ValidatedBackupData {
 
   // 10. Sanitize xpEvents (if present)
   const validXpEvents: XPEvent[] = [];
+  const seenXpIds = new Set<string>();
+
   if (Array.isArray(obj.xpEvents)) {
     for (const x of obj.xpEvents) {
       if (!x || typeof x !== 'object') continue;
       if (typeof x.id === 'string' && isValidDateString(x.date) && typeof x.amount === 'number') {
+        if (seenXpIds.has(x.id)) continue;
+        seenXpIds.add(x.id);
+
         validXpEvents.push({
           id: x.id,
           date: x.date,

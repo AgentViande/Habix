@@ -159,4 +159,43 @@ describe('JSON Import Validation & Security (import-export.ts)', () => {
     expect(sanitized.xpEvents?.[0].amount).toBe(25);
     expect(sanitized.xpEvents?.[0].date).toBe('2026-10-15');
   });
+
+  it('deduplicates duplicate items to prevent Dexie ConstraintError during import', () => {
+    const raw = {
+      habits: [
+        { id: 'h-1', name: 'Habit 1' },
+        { id: 'h-1', name: 'Habit 1 Duplicate' }, // Duplicate habit id
+      ],
+      completions: [
+        { id: 'c-1', habitId: 'h-1', date: '2026-10-14', value: 1 },
+        { id: 'c-1', habitId: 'h-1', date: '2026-10-14', value: 1 }, // Duplicate id
+        { id: 'c-2', habitId: 'h-1', date: '2026-10-14', value: 1 }, // Duplicate habitId+date
+      ],
+      freezeDays: [
+        { id: 'f-1', habitId: 'h-1', date: '2026-10-13' },
+        { id: 'f-1', habitId: 'h-1', date: '2026-10-13' }, // Duplicate id
+        { id: 'f-2', habitId: 'h-1', date: '2026-10-13' }, // Duplicate habitId+date
+      ],
+      categories: [
+        { id: 'cat-1', name: 'Santé' },
+        { id: 'cat-1', name: 'Santé Bis' }, // Duplicate category id
+      ],
+      moods: [
+        { id: 'm-1', date: '2026-10-14', level: 4 },
+        { id: 'm-2', date: '2026-10-14', level: 5 }, // Duplicate mood date
+      ],
+      unlockedBadges: [
+        { id: 'b-1', badgeId: 'comp_1' },
+        { id: 'b-2', badgeId: 'comp_1' }, // Duplicate badgeId
+      ],
+    };
+
+    const sanitized = validateAndSanitizeBackup(raw);
+    expect(sanitized.habits.length).toBe(1);
+    expect(sanitized.completions.length).toBe(1);
+    expect(sanitized.freezeDays.length).toBe(1);
+    expect(sanitized.categories.length).toBe(1);
+    expect(sanitized.moods.length).toBe(1);
+    expect(sanitized.unlockedBadges.length).toBe(1);
+  });
 });

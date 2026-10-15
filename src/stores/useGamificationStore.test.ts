@@ -79,4 +79,30 @@ describe('useGamificationStore - Anti-Exploit / Infinite XP Prevention', () => {
 
     expect(useGamificationStore.getState().profile?.totalXP).toBe(initialXP + 40);
   });
+
+  it('resets awarded habits on a new day (midnight rollover)', async () => {
+    const store = useGamificationStore.getState();
+
+    // Day 1 (2026-10-15): habit-3 gains XP
+    const resDay1 = await store.addXP(20, {
+      date: '2026-10-15',
+      habitId: 'habit-3',
+      habitName: 'Habit 3',
+    });
+    expect(resDay1.alreadyAwarded).toBe(false);
+    expect(useGamificationStore.getState().isHabitAwardedToday('habit-3', '2026-10-15')).toBe(true);
+
+    // Day 2 (2026-10-16): habit-3 MUST be eligible to gain XP again on the new day
+    expect(useGamificationStore.getState().isHabitAwardedToday('habit-3', '2026-10-16')).toBe(
+      false
+    );
+
+    const resDay2 = await store.addXP(20, {
+      date: '2026-10-16',
+      habitId: 'habit-3',
+      habitName: 'Habit 3',
+    });
+    expect(resDay2.alreadyAwarded).toBe(false);
+    expect(useGamificationStore.getState().isHabitAwardedToday('habit-3', '2026-10-16')).toBe(true);
+  });
 });

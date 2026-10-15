@@ -82,15 +82,20 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     async function init() {
-      await seedDefaultData();
-      await Promise.all([
-        loadAll(),
-        loadGamification(),
-        loadSettings(),
-        loadMoods(),
-        loadChallenges(),
-      ]);
-      setIsInitializing(false);
+      try {
+        await seedDefaultData();
+        await Promise.all([
+          loadAll(),
+          loadGamification(),
+          loadSettings(),
+          loadMoods(),
+          loadChallenges(),
+        ]);
+      } catch (err) {
+        console.error('[Habix App] Initialization error:', err);
+      } finally {
+        setIsInitializing(false);
+      }
     }
     init();
   }, [loadAll, loadGamification, loadSettings, loadMoods, loadChallenges]);
@@ -101,8 +106,13 @@ export const App: React.FC = () => {
     } else if (settings.theme === 'dark') {
       document.documentElement.setAttribute('data-theme', 'dark');
     } else {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const applyTheme = (e: MediaQueryList | MediaQueryListEvent) => {
+        document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+      };
+      applyTheme(mediaQuery);
+      mediaQuery.addEventListener('change', applyTheme);
+      return () => mediaQuery.removeEventListener('change', applyTheme);
     }
   }, [settings.theme]);
 

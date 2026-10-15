@@ -59,7 +59,7 @@ export const useChallengeStore = create<ChallengeStoreState>((set, get) => ({
     }));
   },
 
-  updateChallengeProgress: async (habitId, _today, isCompleted, isFrozen) => {
+  updateChallengeProgress: async (habitId, today, isCompleted, isFrozen) => {
     const active = get().challenges.find((c) => c.habitId === habitId && c.status === 'active');
     if (!active) return;
 
@@ -67,12 +67,17 @@ export const useChallengeStore = create<ChallengeStoreState>((set, get) => ({
     if (isFrozen) return;
 
     if (isCompleted) {
+      if (active.lastProgressDate === today) {
+        return;
+      }
+
       const nextDay = active.currentDay + 1;
       const isFinished = nextDay > active.duration;
 
       const updated: Challenge = {
         ...active,
         currentDay: Math.min(active.duration, nextDay),
+        lastProgressDate: today,
         status: isFinished ? 'completed' : 'active',
         completedAt: isFinished ? new Date() : null,
       };
