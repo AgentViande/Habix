@@ -2,11 +2,13 @@ name: Build & Release Windows
 
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*'
   workflow_dispatch:
+
+concurrency:
+  group: release-windows
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -37,10 +39,7 @@ jobs:
         shell: bash
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          if [ "$GITHUB_REF_TYPE" != "tag" ]; then
-            echo "Current branch push with version $VERSION"
-            git tag "v$VERSION" 2>/dev/null || true
-          fi
+          echo "Publishing release version $VERSION"
           echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Package Electron & Publish GitHub Release
