@@ -9,6 +9,18 @@ export default defineConfig({
       ignored: ['**/release/**', '**/dist/**'],
     },
   },
+  build: {
+    chunkSizeWarningLimit: 800,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-charts': ['recharts'],
+          'vendor-motion': ['framer-motion'],
+          'vendor-db': ['dexie', 'dexie-react-hooks'],
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({

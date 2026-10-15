@@ -57,7 +57,23 @@ export const SettingsPage: React.FC = () => {
 
       const unsubError = window.updater.onError((err) => {
         setIsCheckingUpdate(false);
-        setUpdateStatus(`Erreur de recherche : ${err}`);
+        const errMsg = String(err || '');
+        if (errMsg.includes('504') || errMsg.includes('Gateway Time-out')) {
+          setUpdateStatus(
+            "Le serveur GitHub n'a pas répondu à temps (504 Timeout temporaire). Veuillez réessayer dans un instant."
+          );
+        } else if (
+          errMsg.includes('net::ERR_INTERNET_DISCONNECTED') ||
+          errMsg.includes('ENOTFOUND')
+        ) {
+          setUpdateStatus('Impossible de contacter GitHub. Vérifiez votre connexion Internet.');
+        } else {
+          const cleanMsg = errMsg
+            .split('\n')[0]
+            .replace(/<[^>]*>/g, '')
+            .trim();
+          setUpdateStatus(`Erreur de recherche : ${cleanMsg || 'Erreur temporaire'}`);
+        }
       });
 
       return () => {
@@ -80,7 +96,18 @@ export const SettingsPage: React.FC = () => {
       }
     } catch (err: unknown) {
       setIsCheckingUpdate(false);
-      setUpdateStatus(`Erreur : ${(err as Error)?.message || String(err)}`);
+      const errMsg = (err as Error)?.message || String(err);
+      if (errMsg.includes('504') || errMsg.includes('Gateway Time-out')) {
+        setUpdateStatus(
+          "Le serveur GitHub n'a pas répondu à temps (504 Timeout temporaire). Veuillez réessayer dans un instant."
+        );
+      } else {
+        const cleanMsg = errMsg
+          .split('\n')[0]
+          .replace(/<[^>]*>/g, '')
+          .trim();
+        setUpdateStatus(`Erreur : ${cleanMsg}`);
+      }
     }
   };
 

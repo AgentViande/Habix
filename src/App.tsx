@@ -11,12 +11,14 @@ const isElectron =
 const Router = isElectron ? HashRouter : BrowserRouter;
 import { AppLayout } from './components/layout/AppLayout';
 import { TodayPage } from './pages/TodayPage';
-import { HabitsPage } from './pages/HabitsPage';
-import { StatsPage } from './pages/StatsPage';
-import { ChallengesPage } from './pages/ChallengesPage';
-import { ReviewPage } from './pages/ReviewPage';
-import { ProfilePage } from './pages/ProfilePage';
-import { SettingsPage } from './pages/SettingsPage';
+
+// Code-split other routes to optimize initial bundle size & startup performance
+const HabitsPage = React.lazy(() => import('./pages/HabitsPage'));
+const StatsPage = React.lazy(() => import('./pages/StatsPage'));
+const ChallengesPage = React.lazy(() => import('./pages/ChallengesPage'));
+const ReviewPage = React.lazy(() => import('./pages/ReviewPage'));
+const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
+const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
 import { BadgeUnlockModal } from './components/gamification/BadgeUnlockModal';
 import { LevelUpModal } from './components/gamification/LevelUpModal';
 import { UpdateToast } from './components/ui/UpdateToast';
@@ -28,6 +30,12 @@ import { useSettingsStore } from './stores/useSettingsStore';
 import { useMoodStore } from './stores/useMoodStore';
 import { useChallengeStore } from './stores/useChallengeStore';
 import { seedDefaultData } from './db/seed';
+
+const PageFallback: React.FC = () => (
+  <div className="flex items-center justify-center min-h-[50vh] text-[var(--text-muted)] text-sm animate-pulse">
+    Chargement...
+  </div>
+);
 
 const AnimatedRoutes: React.FC = () => {
   const location = useLocation();
@@ -47,16 +55,18 @@ const AnimatedRoutes: React.FC = () => {
         transition={{ duration: animationsEnabled ? 0.22 : 0, ease: [0.22, 1, 0.36, 1] }}
         className="w-full"
       >
-        <Routes location={location}>
-          <Route path="/" element={<TodayPage />} />
-          <Route path="/habits" element={<HabitsPage />} />
-          <Route path="/stats" element={<StatsPage />} />
-          <Route path="/challenges" element={<ChallengesPage />} />
-          <Route path="/review" element={<ReviewPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <React.Suspense fallback={<PageFallback />}>
+          <Routes location={location}>
+            <Route path="/" element={<TodayPage />} />
+            <Route path="/habits" element={<HabitsPage />} />
+            <Route path="/stats" element={<StatsPage />} />
+            <Route path="/challenges" element={<ChallengesPage />} />
+            <Route path="/review" element={<ReviewPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </React.Suspense>
       </motion.div>
     </AnimatePresence>
   );

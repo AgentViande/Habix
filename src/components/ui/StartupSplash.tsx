@@ -25,15 +25,22 @@ export const StartupSplash: React.FC<StartupSplashProps> = ({
   const isReducedMotion =
     typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const animationsEnabled = (settings.animationsEnabled ?? true) && !isReducedMotion;
+  const effectiveMinDuration = animationsEnabled ? minDuration : 0;
 
   useEffect(() => {
+    if (!animationsEnabled) {
+      setProgress(100);
+      setStatusText('Prêt !');
+      return;
+    }
+
     // Stepped progress animation
     const step1 = setTimeout(
       () => {
         setProgress(60);
         setStatusText('Synchronisation locale...');
       },
-      Math.floor(minDuration * 0.4)
+      Math.floor(effectiveMinDuration * 0.35)
     );
 
     const step2 = setTimeout(
@@ -41,20 +48,20 @@ export const StartupSplash: React.FC<StartupSplashProps> = ({
         setProgress(90);
         setStatusText('Préparation de votre aventure...');
       },
-      Math.floor(minDuration * 0.75)
+      Math.floor(effectiveMinDuration * 0.7)
     );
 
     const step3 = setTimeout(() => {
       setProgress(100);
       setStatusText('Prêt !');
-    }, minDuration);
+    }, effectiveMinDuration);
 
     return () => {
       clearTimeout(step1);
       clearTimeout(step2);
       clearTimeout(step3);
     };
-  }, [minDuration]);
+  }, [effectiveMinDuration, animationsEnabled]);
 
   useEffect(() => {
     let splashDismissed = false;
@@ -67,12 +74,17 @@ export const StartupSplash: React.FC<StartupSplashProps> = ({
       }
     };
 
+    if (!animationsEnabled && !isLoading) {
+      dismiss();
+      return;
+    }
+
     // Minimum display timer
     const minTimer = setTimeout(() => {
       if (!isLoading) {
         dismiss();
       }
-    }, minDuration);
+    }, effectiveMinDuration);
 
     // Safety maximum timer (never stay blocked beyond maxDuration)
     const safetyTimer = setTimeout(() => {
@@ -83,18 +95,21 @@ export const StartupSplash: React.FC<StartupSplashProps> = ({
       clearTimeout(minTimer);
       clearTimeout(safetyTimer);
     };
-  }, [isLoading, minDuration, maxDuration, onFinish]);
+  }, [isLoading, effectiveMinDuration, maxDuration, animationsEnabled, onFinish]);
 
-  // When isLoading becomes false, check if minDuration has elapsed
+  // When isLoading finishes and progress reaches 100%, dismiss smoothly
   useEffect(() => {
     if (!isLoading && progress >= 100) {
-      const dismissTimer = setTimeout(() => {
-        setIsVisible(false);
-        if (onFinish) onFinish();
-      }, 100);
+      const dismissTimer = setTimeout(
+        () => {
+          setIsVisible(false);
+          if (onFinish) onFinish();
+        },
+        animationsEnabled ? 80 : 0
+      );
       return () => clearTimeout(dismissTimer);
     }
-  }, [isLoading, progress, onFinish]);
+  }, [isLoading, progress, animationsEnabled, onFinish]);
 
   return (
     <AnimatePresence>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useHabitStore } from '../stores/useHabitStore';
 import { useGamificationStore } from '../stores/useGamificationStore';
@@ -15,6 +15,9 @@ import { calculateStreak } from '../lib/streaks';
 import { getTodayLocal, weekDayToNumber, getDayOfWeek, getLocalTime } from '../lib/date-utils';
 import { calculateXPGain } from '../services/xp';
 import type { Habit } from '../models/habit';
+import type { Category } from '../models/category';
+import type { Completion } from '../models/completion';
+import type { FreezeDay } from '../models/freeze-day';
 import {
   Plus,
   Sparkles,
@@ -48,7 +51,8 @@ export const TodayPage: React.FC = () => {
     freezeDay,
   } = useHabitStore();
 
-  const { profile, addXP, consumeFreezeDay, checkBadges } = useGamificationStore();
+  const { profile, addXP, consumeFreezeDay, checkBadges, isHabitAwardedToday } =
+    useGamificationStore();
 
   const { settings } = useSettingsStore();
   const { moods, saveMood } = useMoodStore();
@@ -80,40 +84,71 @@ export const TodayPage: React.FC = () => {
   const weekStartsOn = weekDayToNumber(settings.weekStartDay);
   const todayDow = getDayOfWeek(today);
 
-  // Active habits
-  const activeHabits = habits.filter((h) => !h.isArchived);
+  // Active habits (memoized for performance)
+  const activeHabits = useMemo(() => habits.filter((h) => !h.isArchived), [habits]);
 
-  // Filter habits expected for today
-  const habitsForToday = activeHabits.filter((habit) => {
-    if (selectedCategory && habit.categoryId !== selectedCategory) {
-      return false;
+  // Filter habits expected for today (memoized)
+  const habitsForToday = useMemo(() => {
+    return activeHabits.filter((habit) => {
+      if (selectedCategory && habit.categoryId !== selectedCategory) {
+        return false;
+      }
+
+      if (habit.frequencyType === 'weekly_fixed') {
+        const days = (habit.frequencyConfig as { days: number[] }).days || [];
+        return days.includes(todayDow);
+      }
+
+      return true;
+    });
+  }, [activeHabits, selectedCategory, todayDow]);
+
+  // Pre-indexed Maps for O(1) lookups instead of repeated O(N) array scans
+  const { completionsByHabit, freezeDaysByHabit, categoriesMap } = useMemo(() => {
+    const compMap = new Map<string, Completion[]>();
+    for (const c of completions) {
+      const list = compMap.get(c.habitId);
+      if (list) list.push(c);
+      else compMap.set(c.habitId, [c]);
     }
 
-    if (habit.frequencyType === 'weekly_fixed') {
-      const days = (habit.frequencyConfig as { days: number[] }).days || [];
-      return days.includes(todayDow);
+    const freezeMap = new Map<string, FreezeDay[]>();
+    for (const f of freezeDays) {
+      const list = freezeMap.get(f.habitId);
+      if (list) list.push(f);
+      else freezeMap.set(f.habitId, [f]);
     }
 
-    return true;
-  });
+    const catMap = new Map<string, Category>();
+    for (const cat of categories) {
+      catMap.set(cat.id, cat);
+    }
 
-  // Calculate day completion progress
+    return { completionsByHabit: compMap, freezeDaysByHabit: freezeMap, categoriesMap: catMap };
+  }, [completions, freezeDays, categories]);
+
+  // Calculate day completion progress (memoized)
   const totalExpected = habitsForToday.length;
-  const completedTodayCount = habitsForToday.filter((h) => {
-    const comp = completions.find((c) => c.habitId === h.id && c.date === today);
-    if (!comp) return false;
-    if (h.targetType === 'numeric' && h.targetValue !== null) {
-      return comp.value >= h.targetValue;
-    }
-    return comp.value >= 1;
-  }).length;
+  const completedTodayCount = useMemo(() => {
+    return habitsForToday.filter((h) => {
+      const list = completionsByHabit.get(h.id);
+      const comp = list?.find((c) => c.date === today);
+      if (!comp) return false;
+      if (h.targetType === 'numeric' && h.targetValue !== null) {
+        return comp.value >= h.targetValue;
+      }
+      return comp.value >= 1;
+    }).length;
+  }, [habitsForToday, completionsByHabit, today]);
 
   const isAllDone = totalExpected > 0 && completedTodayCount === totalExpected;
-  const progressPercent =
-    totalExpected > 0 ? Math.round((completedTodayCount / totalExpected) * 100) : 0;
+  const progressPercent = useMemo(
+    () => (totalExpected > 0 ? Math.round((completedTodayCount / totalExpected) * 100) : 0),
+    [completedTodayCount, totalExpected]
+  );
 
   // Today's mood entry
-  const todayMood = moods.find((m) => m.date === today);
+  const todayMood = useMemo(() => moods.find((m) => m.date === today), [moods, today]);
 
   // Check badges whenever completions change
   useEffect(() => {
@@ -128,93 +163,144 @@ export const TodayPage: React.FC = () => {
     });
   }, [completions, habits, freezeDays, moods, challenges, today, weekStartsOn, checkBadges]);
 
-  const handleToggle = async (habit: Habit) => {
-    const isCompleted = completions.some((c) => c.habitId === habit.id && c.date === today);
-    const nowTime = getLocalTime(settings.timezone);
-
-    await toggleCompletion(habit.id, today);
-
-    if (!isCompleted) {
-      // Calculate habit streak
-      const habitComps = completions.filter((c) => c.habitId === habit.id);
-      const habitFreezes = freezeDays.filter((f) => f.habitId === habit.id);
-      const streak = calculateStreak(habit, habitComps, habitFreezes, { today, weekStartsOn });
-
-      // XP calculation with streak multiplier & early bird
-      const willBeAllDone = completedTodayCount + 1 === totalExpected;
-      const gain = calculateXPGain({
-        difficulty: habit.difficulty,
-        currentStreak: streak.current,
-        completedAtTime: nowTime,
-        isPerfectDay: willBeAllDone,
-      });
-
-      await addXP(gain.totalXP, {
-        date: today,
-        habitId: habit.id,
-        habitName: habit.name,
-        reason: willBeAllDone ? 'perfect_day' : 'habit_completion',
-      });
-      await updateChallengeProgress(habit.id, today, true, false);
-
-      if (willBeAllDone) {
-        sounds.playAllDone();
-        triggerLevelUpConfetti();
-      }
-    }
-  };
-
-  const handleFreeze = async (habit: Habit) => {
-    const isAlreadyFrozen = freezeDays.some((f) => f.habitId === habit.id && f.date === today);
-    if (isAlreadyFrozen) return;
-
-    const available = profile?.availableFreezeDays ?? 0;
-    if (available <= 0) {
-      alert(
-        "Vous n'avez plus de jours de gel disponibles dans votre réserve ❄️.\n\nAtteignez des paliers de streak ou passez au niveau supérieur pour en débloquer d'autres !"
-      );
-      return;
-    }
-
-    const consumed = await consumeFreezeDay();
-    if (consumed) {
-      await freezeDay(habit.id, today);
-      await updateChallengeProgress(habit.id, today, false, true);
-    }
-  };
-
-  const handleNumericSave = async (value: number) => {
-    if (!numericModalHabit) return;
-    const previous = completions.find(
-      (c) => c.habitId === numericModalHabit.id && c.date === today
-    );
-    const wasMet =
-      previous && numericModalHabit.targetValue && previous.value >= numericModalHabit.targetValue;
-    await setNumericValue(numericModalHabit.id, today, value);
-
-    if (!wasMet && numericModalHabit.targetValue && value >= numericModalHabit.targetValue) {
+  const handleToggle = useCallback(
+    async (habit: Habit) => {
+      const isCompleted = completions.some((c) => c.habitId === habit.id && c.date === today);
       const nowTime = getLocalTime(settings.timezone);
-      const willBeAllDone = completedTodayCount + 1 === totalExpected;
-      const gain = calculateXPGain({
-        difficulty: numericModalHabit.difficulty,
-        currentStreak: 0,
-        completedAtTime: nowTime,
-        isPerfectDay: willBeAllDone,
-      });
-      await addXP(gain.totalXP, {
-        date: today,
-        habitId: numericModalHabit.id,
-        habitName: numericModalHabit.name,
-        reason: willBeAllDone ? 'perfect_day' : 'habit_completion',
-      });
-      await updateChallengeProgress(numericModalHabit.id, today, true, false);
 
-      if (willBeAllDone) {
-        sounds.playAllDone();
-        triggerLevelUpConfetti();
+      await toggleCompletion(habit.id, today);
+
+      if (!isCompleted) {
+        // ANTI-EXPLOIT: Check if XP was already awarded today for this habit
+        const alreadyEarned = isHabitAwardedToday(habit.id);
+        const willBeAllDone = completedTodayCount + 1 === totalExpected;
+
+        if (!alreadyEarned) {
+          const habitComps = completionsByHabit.get(habit.id) || [];
+          const habitFreezes = freezeDaysByHabit.get(habit.id) || [];
+          const streak = calculateStreak(habit, habitComps, habitFreezes, { today, weekStartsOn });
+
+          const gain = calculateXPGain({
+            difficulty: habit.difficulty,
+            currentStreak: streak.current,
+            completedAtTime: nowTime,
+            isPerfectDay: willBeAllDone,
+          });
+
+          await addXP(gain.totalXP, {
+            date: today,
+            habitId: habit.id,
+            habitName: habit.name,
+            reason: willBeAllDone ? 'perfect_day' : 'habit_completion',
+          });
+        }
+
+        await updateChallengeProgress(habit.id, today, true, false);
+
+        if (willBeAllDone) {
+          sounds.playAllDone();
+          triggerLevelUpConfetti();
+        }
       }
-    }
-  };
+    },
+    [
+      completions,
+      today,
+      settings.timezone,
+      toggleCompletion,
+      isHabitAwardedToday,
+      completedTodayCount,
+      totalExpected,
+      completionsByHabit,
+      freezeDaysByHabit,
+      weekStartsOn,
+      addXP,
+      updateChallengeProgress,
+    ]
+  );
+
+  const handleFreeze = useCallback(
+    async (habit: Habit) => {
+      const isAlreadyFrozen = freezeDays.some((f) => f.habitId === habit.id && f.date === today);
+      if (isAlreadyFrozen) return;
+
+      const available = profile?.availableFreezeDays ?? 0;
+      if (available <= 0) {
+        alert(
+          "Vous n'avez plus de jours de gel disponibles dans votre réserve ❄️.\n\nAtteignez des paliers de streak ou passez au niveau supérieur pour en débloquer d'autres !"
+        );
+        return;
+      }
+
+      const consumed = await consumeFreezeDay();
+      if (consumed) {
+        await freezeDay(habit.id, today);
+        await updateChallengeProgress(habit.id, today, false, true);
+      }
+    },
+    [
+      freezeDays,
+      today,
+      profile?.availableFreezeDays,
+      consumeFreezeDay,
+      freezeDay,
+      updateChallengeProgress,
+    ]
+  );
+
+  const handleNumericSave = useCallback(
+    async (value: number) => {
+      if (!numericModalHabit) return;
+      const previous = completions.find(
+        (c) => c.habitId === numericModalHabit.id && c.date === today
+      );
+      const wasMet =
+        previous &&
+        numericModalHabit.targetValue &&
+        previous.value >= numericModalHabit.targetValue;
+      await setNumericValue(numericModalHabit.id, today, value);
+
+      if (!wasMet && numericModalHabit.targetValue && value >= numericModalHabit.targetValue) {
+        const alreadyEarned = isHabitAwardedToday(numericModalHabit.id);
+        const willBeAllDone = completedTodayCount + 1 === totalExpected;
+
+        if (!alreadyEarned) {
+          const nowTime = getLocalTime(settings.timezone);
+          const gain = calculateXPGain({
+            difficulty: numericModalHabit.difficulty,
+            currentStreak: 0,
+            completedAtTime: nowTime,
+            isPerfectDay: willBeAllDone,
+          });
+          await addXP(gain.totalXP, {
+            date: today,
+            habitId: numericModalHabit.id,
+            habitName: numericModalHabit.name,
+            reason: willBeAllDone ? 'perfect_day' : 'habit_completion',
+          });
+        }
+
+        await updateChallengeProgress(numericModalHabit.id, today, true, false);
+
+        if (willBeAllDone) {
+          sounds.playAllDone();
+          triggerLevelUpConfetti();
+        }
+      }
+    },
+    [
+      numericModalHabit,
+      completions,
+      today,
+      setNumericValue,
+      isHabitAwardedToday,
+      completedTodayCount,
+      totalExpected,
+      settings.timezone,
+      addXP,
+      updateChallengeProgress,
+    ]
+  );
 
   const formattedDate = new Intl.DateTimeFormat('fr-FR', {
     weekday: 'long',
@@ -456,8 +542,8 @@ export const TodayPage: React.FC = () => {
       ) : (
         <div className="grid gap-3 sm:gap-4">
           {habitsForToday.map((habit) => {
-            const habitCompletions = completions.filter((c) => c.habitId === habit.id);
-            const habitFreezes = freezeDays.filter((f) => f.habitId === habit.id);
+            const habitCompletions = completionsByHabit.get(habit.id) || [];
+            const habitFreezes = freezeDaysByHabit.get(habit.id) || [];
             const streak = calculateStreak(habit, habitCompletions, habitFreezes, {
               today,
               weekStartsOn,
@@ -470,7 +556,8 @@ export const TodayPage: React.FC = () => {
                 : (todayComp?.value ?? 0) >= 1;
 
             const isFrozen = habitFreezes.some((f) => f.date === today);
-            const category = categories.find((c) => c.id === habit.categoryId);
+            const category = habit.categoryId ? categoriesMap.get(habit.categoryId) : undefined;
+            const hasEarnedXPToday = isHabitAwardedToday(habit.id);
 
             return (
               <HabitCard
@@ -481,6 +568,7 @@ export const TodayPage: React.FC = () => {
                 bestStreak={streak.best}
                 isCompleted={isCompleted}
                 isFrozen={isFrozen}
+                hasEarnedXPToday={hasEarnedXPToday}
                 currentValue={todayComp?.value ?? 0}
                 onToggle={() => handleToggle(habit)}
                 onFreeze={() => handleFreeze(habit)}
