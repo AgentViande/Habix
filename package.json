@@ -1,7 +1,7 @@
 {
   "name": "habix",
   "private": true,
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "Suivi d'habitudes moderne et RPG gamifié",
   "author": "Habix",
   "main": "electron/main.cjs",
