@@ -178,7 +178,12 @@ export const HabitComparisonChart: React.FC<HabitComparisonChartProps> = ({
                   return null;
                 }}
               />
-              <Bar dataKey={metric} radius={[0, 6, 6, 0]}>
+              <Bar
+                dataKey={metric}
+                radius={[0, 6, 6, 0]}
+                isAnimationActive={true}
+                animationDuration={850}
+              >
                 {chartData.map((entry) => (
                   <Cell key={entry.id} fill={entry.color} />
                 ))}

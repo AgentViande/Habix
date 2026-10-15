@@ -121,4 +121,42 @@ describe('JSON Import Validation & Security (import-export.ts)', () => {
     expect(sanitized.moods.length).toBe(1);
     expect(sanitized.moods[0].date).toBe('2026-10-14');
   });
+
+  it('sanitizes and preserves personalization settings and xpEvents', () => {
+    const raw = {
+      habits: [{ id: 'h-1', name: 'Habit 1' }],
+      settings: [
+        {
+          id: 'default',
+          theme: 'dark',
+          userName: '  Sarah  ',
+          soundEnabled: true,
+          soundVolume: 0.35,
+          animationsEnabled: true,
+          showDailyQuote: true,
+        },
+      ],
+      xpEvents: [
+        {
+          id: 'xpe-1',
+          date: '2026-10-15',
+          amount: 25,
+          reason: 'habit_completion',
+          habitId: 'h-1',
+          createdAt: '2026-10-15T09:00:00.000Z',
+        },
+      ],
+    };
+
+    const sanitized = validateAndSanitizeBackup(raw);
+    expect(sanitized.settings?.[0].userName).toBe('Sarah');
+    expect(sanitized.settings?.[0].soundVolume).toBe(0.35);
+    expect(sanitized.settings?.[0].soundEnabled).toBe(true);
+    expect(sanitized.settings?.[0].animationsEnabled).toBe(true);
+    expect(sanitized.settings?.[0].showDailyQuote).toBe(true);
+
+    expect(sanitized.xpEvents?.length).toBe(1);
+    expect(sanitized.xpEvents?.[0].amount).toBe(25);
+    expect(sanitized.xpEvents?.[0].date).toBe('2026-10-15');
+  });
 });

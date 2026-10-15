@@ -98,8 +98,8 @@ export const UpdateToast: React.FC = () => {
                   {isReady
                     ? 'Prête à être installée au redémarrage.'
                     : progress
-                    ? `Téléchargement : ${Math.round(progress.percent)}%`
-                    : 'Téléchargement automatique en cours...'}
+                      ? `Téléchargement : ${Math.round(progress.percent)}%`
+                      : 'Téléchargement automatique en cours...'}
                 </p>
               </div>
             </div>

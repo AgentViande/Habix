@@ -14,9 +14,14 @@ import {
   AlertTriangle,
   Bell,
   Sparkles,
+  Volume2,
+  VolumeX,
+  User,
+  Quote,
 } from 'lucide-react';
 import { requestNotificationPermission, sendLocalNotification } from '../services/notifications';
 import { validateAndSanitizeBackup } from '../services/import-export';
+import { sounds } from '../lib/sounds';
 
 export const SettingsPage: React.FC = () => {
   const { settings, updateSettings } = useSettingsStore();
@@ -45,7 +50,9 @@ export const SettingsPage: React.FC = () => {
 
       const unsubAvailable = window.updater.onAvailable((info) => {
         setIsCheckingUpdate(false);
-        setUpdateStatus(`Nouvelle version v${info.version} disponible ! Téléchargement en cours...`);
+        setUpdateStatus(
+          `Nouvelle version v${info.version} disponible ! Téléchargement en cours...`
+        );
       });
 
       const unsubError = window.updater.onError((err) => {
@@ -123,6 +130,7 @@ export const SettingsPage: React.FC = () => {
       unlockedBadges: await db.unlockedBadges.toArray(),
       userProfile: await db.userProfile.toArray(),
       settings: await db.settings.toArray(),
+      xpEvents: await db.xpEvents.toArray(),
       exportDate: new Date().toISOString(),
       version: 1,
     };
@@ -179,6 +187,7 @@ export const SettingsPage: React.FC = () => {
           db.challenges,
           db.unlockedBadges,
           db.settings,
+          db.xpEvents,
         ],
         async () => {
           await db.habits.clear();
@@ -188,6 +197,7 @@ export const SettingsPage: React.FC = () => {
           await db.moods.clear();
           await db.challenges.clear();
           await db.unlockedBadges.clear();
+          await db.xpEvents.clear();
 
           if (sanitized.habits.length) await db.habits.bulkAdd(sanitized.habits);
           if (sanitized.completions.length) await db.completions.bulkAdd(sanitized.completions);
@@ -199,6 +209,7 @@ export const SettingsPage: React.FC = () => {
             await db.unlockedBadges.bulkAdd(sanitized.unlockedBadges);
           if (sanitized.userProfile?.length) await db.userProfile.bulkPut(sanitized.userProfile);
           if (sanitized.settings?.length) await db.settings.bulkPut(sanitized.settings);
+          if (sanitized.xpEvents?.length) await db.xpEvents.bulkAdd(sanitized.xpEvents);
         }
       );
 
@@ -248,6 +259,151 @@ export const SettingsPage: React.FC = () => {
               </button>
             );
           })}
+        </div>
+      </div>
+
+      {/* Personnalisation */}
+      <div className="p-5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] space-y-4">
+        <div>
+          <h3 className="text-sm font-bold text-[var(--text-primary)]">Personnalisation</h3>
+          <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
+            Ajustez votre prénom, l'ambiance sonore, les animations et les citations quotidiennes.
+          </p>
+        </div>
+
+        {/* Prénom */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-[var(--border-subtle)]">
+          <div className="flex items-center gap-2.5">
+            <User className="w-4 h-4 text-indigo-400" />
+            <div>
+              <span className="text-xs sm:text-sm font-medium text-[var(--text-primary)] block">
+                Votre prénom
+              </span>
+              <span className="text-[11px] text-[var(--text-secondary)]">
+                Personnalise les salutations et les félicitations
+              </span>
+            </div>
+          </div>
+          <input
+            type="text"
+            maxLength={30}
+            value={settings.userName || ''}
+            onChange={(e) => updateSettings({ userName: e.target.value.slice(0, 30) })}
+            placeholder="Ex : Alex, Sarah..."
+            className="w-full sm:w-48 bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] focus:border-indigo-500 rounded-xl px-3 py-1.5 text-xs text-[var(--text-primary)] font-medium outline-none"
+          />
+        </div>
+
+        {/* Effets sonores & Volume */}
+        <div className="pt-3 border-t border-[var(--border-subtle)] space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              {settings.soundEnabled ? (
+                <Volume2 className="w-4 h-4 text-indigo-400" />
+              ) : (
+                <VolumeX className="w-4 h-4 text-[var(--text-muted)]" />
+              )}
+              <div>
+                <span className="text-xs sm:text-sm font-medium text-[var(--text-primary)] block">
+                  Effets sonores
+                </span>
+                <span className="text-[11px] text-[var(--text-secondary)]">
+                  Pops doux à la validation, jingles de niveau et de fin de journée
+                </span>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.soundEnabled}
+                onChange={(e) => updateSettings({ soundEnabled: e.target.checked })}
+                className="sr-only peer"
+              />
+              <div className="w-9 h-5 bg-[var(--bg-tertiary)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-500"></div>
+            </label>
+          </div>
+
+          {/* Volume slider & Test sound button */}
+          {settings.soundEnabled && (
+            <div className="flex items-center justify-between gap-4 pl-6 pt-1">
+              <div className="flex-1 max-w-xs">
+                <div className="flex justify-between text-[11px] text-[var(--text-muted)] mb-1">
+                  <span>Volume</span>
+                  <span className="font-semibold text-indigo-400">
+                    {Math.round((settings.soundVolume ?? 0.2) * 100)}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={0.05}
+                  max={1}
+                  step={0.05}
+                  value={settings.soundVolume ?? 0.2}
+                  onChange={(e) => updateSettings({ soundVolume: parseFloat(e.target.value) })}
+                  className="w-full accent-indigo-500 cursor-pointer h-1.5"
+                />
+              </div>
+
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  sounds.playPop(settings.soundVolume ?? 0.2);
+                }}
+                className="text-xs h-8 px-2.5 flex-shrink-0"
+              >
+                Tester le son 🔊
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Animations de l'interface */}
+        <div className="flex items-center justify-between pt-3 border-t border-[var(--border-subtle)]">
+          <div className="flex items-center gap-2.5">
+            <Sparkles className="w-4 h-4 text-indigo-400" />
+            <div>
+              <span className="text-xs sm:text-sm font-medium text-[var(--text-primary)] block">
+                Animations de l'interface
+              </span>
+              <span className="text-[11px] text-[var(--text-secondary)]">
+                Effets ressort, coche animée et confettis (respecte aussi prefers-reduced-motion)
+              </span>
+            </div>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={settings.animationsEnabled}
+              onChange={(e) => updateSettings({ animationsEnabled: e.target.checked })}
+              className="sr-only peer"
+            />
+            <div className="w-9 h-5 bg-[var(--bg-tertiary)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-500"></div>
+          </label>
+        </div>
+
+        {/* Citation / conseil du jour */}
+        <div className="flex items-center justify-between pt-3 border-t border-[var(--border-subtle)]">
+          <div className="flex items-center gap-2.5">
+            <Quote className="w-4 h-4 text-indigo-400" />
+            <div>
+              <span className="text-xs sm:text-sm font-medium text-[var(--text-primary)] block">
+                Citation & conseil du jour
+              </span>
+              <span className="text-[11px] text-[var(--text-secondary)]">
+                Affiche une inspiration quotidienne sous la salutation du jour
+              </span>
+            </div>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={settings.showDailyQuote}
+              onChange={(e) => updateSettings({ showDailyQuote: e.target.checked })}
+              className="sr-only peer"
+            />
+            <div className="w-9 h-5 bg-[var(--bg-tertiary)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-500"></div>
+          </label>
         </div>
       </div>
 
@@ -402,12 +558,11 @@ export const SettingsPage: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-indigo-400" />
-              <h3 className="text-sm font-bold text-[var(--text-primary)]">
-                À propos d'Habix
-              </h3>
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">À propos d'Habix</h3>
             </div>
             <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-              Version {appVersion} {window.updater ? '(Application de Bureau)' : '(Web / PWA)'} • 100% Local & Open Source
+              Version {appVersion} {window.updater ? '(Application de Bureau)' : '(Web / PWA)'} •
+              100% Local & Open Source
             </p>
           </div>
 
@@ -418,7 +573,9 @@ export const SettingsPage: React.FC = () => {
               disabled={isCheckingUpdate}
               onClick={handleCheckUpdate}
             >
-              <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${isCheckingUpdate ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`w-3.5 h-3.5 mr-1.5 ${isCheckingUpdate ? 'animate-spin' : ''}`}
+              />
               {isCheckingUpdate ? 'Recherche en cours...' : 'Rechercher une mise à jour'}
             </Button>
           )}

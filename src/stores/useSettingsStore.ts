@@ -20,6 +20,11 @@ const DEFAULT_SETTINGS: Settings = {
   showMoodPopup: true,
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Paris',
   customMoodTags: ['travail', 'sport', 'famille', 'sommeil', 'méditation'],
+  userName: '',
+  soundEnabled: true,
+  soundVolume: 0.2,
+  animationsEnabled: true,
+  showDailyQuote: true,
 };
 
 export const useSettingsStore = create<SettingsStoreState>((set, get) => ({
@@ -32,6 +37,9 @@ export const useSettingsStore = create<SettingsStoreState>((set, get) => ({
     if (!settings) {
       settings = DEFAULT_SETTINGS;
       await db.settings.put(settings);
+    } else {
+      // Ensure any newly added settings are merged in
+      settings = { ...DEFAULT_SETTINGS, ...settings };
     }
     set({ settings, isLoading: false });
   },

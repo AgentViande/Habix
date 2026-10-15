@@ -25,6 +25,11 @@ import {
   CalendarCheck,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { DailyQuote } from '../components/habits/DailyQuote';
+import { DailyXPRecap } from '../components/gamification/DailyXPRecap';
+import { getTimeOfDayGreeting, getAllDoneMessage } from '../utils/greeting';
+import { sounds } from '../lib/sounds';
+import { triggerLevelUpConfetti } from '../utils/confetti';
 
 export const TodayPage: React.FC = () => {
   const navigate = useNavigate();
@@ -144,8 +149,18 @@ export const TodayPage: React.FC = () => {
         isPerfectDay: willBeAllDone,
       });
 
-      await addXP(gain.totalXP);
+      await addXP(gain.totalXP, {
+        date: today,
+        habitId: habit.id,
+        habitName: habit.name,
+        reason: willBeAllDone ? 'perfect_day' : 'habit_completion',
+      });
       await updateChallengeProgress(habit.id, today, true, false);
+
+      if (willBeAllDone) {
+        sounds.playAllDone();
+        triggerLevelUpConfetti();
+      }
     }
   };
 
@@ -179,14 +194,25 @@ export const TodayPage: React.FC = () => {
 
     if (!wasMet && numericModalHabit.targetValue && value >= numericModalHabit.targetValue) {
       const nowTime = getLocalTime(settings.timezone);
+      const willBeAllDone = completedTodayCount + 1 === totalExpected;
       const gain = calculateXPGain({
         difficulty: numericModalHabit.difficulty,
         currentStreak: 0,
         completedAtTime: nowTime,
-        isPerfectDay: isAllDone,
+        isPerfectDay: willBeAllDone,
       });
-      await addXP(gain.totalXP);
+      await addXP(gain.totalXP, {
+        date: today,
+        habitId: numericModalHabit.id,
+        habitName: numericModalHabit.name,
+        reason: willBeAllDone ? 'perfect_day' : 'habit_completion',
+      });
       await updateChallengeProgress(numericModalHabit.id, today, true, false);
+
+      if (willBeAllDone) {
+        sounds.playAllDone();
+        triggerLevelUpConfetti();
+      }
     }
   };
 
@@ -198,6 +224,7 @@ export const TodayPage: React.FC = () => {
   }).format(new Date());
 
   const isSundayOrMonday = todayDow === 0 || todayDow === 1;
+  const greeting = getTimeOfDayGreeting(settings.userName);
 
   return (
     <div className="space-y-6">
@@ -209,7 +236,7 @@ export const TodayPage: React.FC = () => {
             <span>{formattedDate}</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--text-primary)] tracking-tight">
-            Aujourd'hui
+            {greeting} 👋
           </h1>
         </div>
 
@@ -228,6 +255,9 @@ export const TodayPage: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {/* Daily Quote / Advice of the Day */}
+      <DailyQuote today={today} />
 
       {/* Weekly Review Banner (on review day) */}
       {isSundayOrMonday && (
@@ -335,7 +365,7 @@ export const TodayPage: React.FC = () => {
             <div className="text-right">
               {progressPercent === 100 ? (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-xs">
-                  <CheckCircle className="w-4 h-4" /> Journée parfaite ! 🎉 (+50 XP)
+                  <CheckCircle className="w-4 h-4" /> {getAllDoneMessage(settings.userName)}
                 </span>
               ) : progressPercent >= 50 ? (
                 <span className="text-xs font-medium text-indigo-400 flex items-center gap-1">
@@ -462,6 +492,15 @@ export const TodayPage: React.FC = () => {
           })}
         </div>
       )}
+
+      {/* Daily XP & Progress Recap */}
+      <DailyXPRecap
+        today={today}
+        habits={activeHabits}
+        completions={completions}
+        freezeDays={freezeDays}
+        isAllDone={isAllDone}
+      />
 
       {/* Modals */}
       <HabitModal

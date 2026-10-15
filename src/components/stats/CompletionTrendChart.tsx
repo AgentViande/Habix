@@ -217,6 +217,8 @@ export const CompletionTrendChart: React.FC<CompletionTrendChartProps> = ({
               strokeWidth={2.5}
               fillOpacity={1}
               fill="url(#rateGradient)"
+              isAnimationActive={true}
+              animationDuration={900}
             />
           </AreaChart>
         </ResponsiveContainer>

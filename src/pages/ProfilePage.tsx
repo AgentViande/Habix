@@ -188,7 +188,8 @@ export const ProfilePage: React.FC = () => {
               Badges & Succès ({unlockedCount}/{totalBadgesCount})
             </h3>
             <p className="text-xs text-[var(--text-secondary)]">
-              {completionPercentage}% complété • {unlockedCount} trophée{unlockedCount > 1 ? 's' : ''} débloqué{unlockedCount > 1 ? 's' : ''}
+              {completionPercentage}% complété • {unlockedCount} trophée
+              {unlockedCount > 1 ? 's' : ''} débloqué{unlockedCount > 1 ? 's' : ''}
             </p>
           </div>
 
@@ -264,7 +265,9 @@ export const ProfilePage: React.FC = () => {
         {/* Badges Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5">
           {filteredBadges.map((badge) => {
-            const unlockedRecord = unlockedMap.get(badge.id) || (badge.id === 'comp_1' ? unlockedMap.get('first_step') : undefined);
+            const unlockedRecord =
+              unlockedMap.get(badge.id) ||
+              (badge.id === 'comp_1' ? unlockedMap.get('first_step') : undefined);
             const unlocked = !!unlockedRecord;
 
             return (

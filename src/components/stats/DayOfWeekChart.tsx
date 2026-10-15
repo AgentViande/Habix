@@ -101,7 +101,12 @@ export const DayOfWeekChart: React.FC<DayOfWeekChartProps> = ({ completions }) =
                 return null;
               }}
             />
-            <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+            <Bar
+              dataKey="count"
+              radius={[6, 6, 0, 0]}
+              isAnimationActive={true}
+              animationDuration={850}
+            >
               {data.map((entry, index) => (
                 <Cell
                   key={`cell-${index}`}

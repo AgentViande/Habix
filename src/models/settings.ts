@@ -16,4 +16,11 @@ export interface Settings {
   /** IANA timezone, e.g. "Europe/Paris" */
   timezone: string;
   customMoodTags: string[];
+
+  // Personnalisation
+  userName: string;
+  soundEnabled: boolean;
+  soundVolume: number; // 0.0 to 1.0
+  animationsEnabled: boolean;
+  showDailyQuote: boolean;
 }

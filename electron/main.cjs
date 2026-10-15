@@ -145,6 +145,7 @@ function createWindow() {
     backgroundColor: '#0b0f1a',
     title: "Habix — Suivi d'habitudes",
     autoHideMenuBar: true,
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false,
@@ -153,6 +154,10 @@ function createWindow() {
       webSecurity: true,
       spellcheck: false,
     },
+  });
+
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
   });
 
   // Open external links in default OS browser

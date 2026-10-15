@@ -8,6 +8,7 @@ import type { UnlockedBadge } from '../models/badge';
 import type { UserProfile } from '../models/user-profile';
 import type { FreezeDay } from '../models/freeze-day';
 import type { Settings } from '../models/settings';
+import type { XPEvent } from '../models/xp-event';
 
 export class HabixDB extends Dexie {
   habits!: Table<Habit>;
@@ -19,6 +20,7 @@ export class HabixDB extends Dexie {
   userProfile!: Table<UserProfile>;
   freezeDays!: Table<FreezeDay>;
   settings!: Table<Settings>;
+  xpEvents!: Table<XPEvent>;
 
   constructor() {
     super('habix');
@@ -33,6 +35,10 @@ export class HabixDB extends Dexie {
       userProfile: 'id',
       freezeDays: 'id, habitId, date, [habitId+date]',
       settings: 'id',
+    });
+
+    this.version(2).stores({
+      xpEvents: 'id, date, habitId, createdAt',
     });
   }
 }

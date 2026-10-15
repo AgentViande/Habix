@@ -140,9 +140,7 @@ describe('Badges Evaluation Service (SPEC.md §7.3)', () => {
     const badges = evaluateNewBadges({
       habits: [habit],
       completions: [],
-      freezeDays: [
-        { id: 'f1', habitId: 'h1', date: '2026-10-10', createdAt: new Date() },
-      ],
+      freezeDays: [{ id: 'f1', habitId: 'h1', date: '2026-10-10', createdAt: new Date() }],
       moods: [],
       currentLevel: 1,
       challenges: [],

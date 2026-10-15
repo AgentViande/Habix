@@ -31,6 +31,11 @@ const DEFAULT_SETTINGS: Settings = {
   showMoodPopup: true,
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   customMoodTags: [],
+  userName: '',
+  soundEnabled: true,
+  soundVolume: 0.2,
+  animationsEnabled: true,
+  showDailyQuote: true,
 };
 
 /**

@@ -97,3 +97,27 @@ select option {
   color: var(--text-primary);
   padding: 6px 12px;
 }
+
+/* Smooth theme transition */
+body,
+aside,
+header,
+nav,
+main {
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    color 0.2s ease;
+}
+
+/* System reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

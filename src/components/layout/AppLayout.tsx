@@ -3,6 +3,9 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useGamificationStore } from '../../stores/useGamificationStore';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { ShortcutsModal } from '../ui/ShortcutsModal';
+import { HabixLogo } from '../ui/HabixLogo';
+import { getLevelInfo } from '../../services/xp';
+import { motion } from 'framer-motion';
 import {
   Calendar,
   CheckCircle2,
@@ -12,7 +15,6 @@ import {
   Moon,
   Sun,
   Sparkles,
-  Flame,
   Target,
   CalendarCheck,
   Command,
@@ -133,9 +135,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         <div>
           {/* Logo */}
           <div className="flex items-center gap-3 px-2 mb-7">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
-              <Flame className="w-6 h-6 fill-white" />
-            </div>
+            <HabixLogo size={40} />
             <div>
               <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-400 via-purple-300 to-pink-400 bg-clip-text text-transparent">
                 Habix
@@ -147,31 +147,39 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           </div>
 
           {/* Profile Mini Card */}
-          <div className="p-3.5 mb-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-[var(--text-primary)] truncate max-w-[120px]">
-                {profile?.displayName || 'Aventurier'}
-              </span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400">
-                Niv. {profile?.currentLevel || 1}
-              </span>
-            </div>
-            {/* XP progress bar */}
-            <div className="w-full bg-[var(--bg-tertiary)] h-1.5 rounded-full overflow-hidden mb-1.5">
-              <div
-                className="bg-gradient-to-r from-[var(--xp-gradient-start)] to-[var(--xp-gradient-end)] h-full transition-all duration-300"
-                style={{ width: `${Math.min(100, (profile?.totalXP || 0) % 100)}%` }}
-              />
-            </div>
-            <div className="flex justify-between text-[10px] text-[var(--text-muted)]">
-              <span className="flex items-center gap-1">
-                <Sparkles className="w-2.5 h-2.5 text-amber-400" /> XP Total
-              </span>
-              <span className="font-semibold text-[var(--text-secondary)]">
-                {profile?.totalXP || 0}
-              </span>
-            </div>
-          </div>
+          {(() => {
+            const levelInfo = getLevelInfo(profile?.totalXP || 0);
+            return (
+              <div className="p-3.5 mb-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-[var(--text-primary)] truncate max-w-[120px]">
+                    {settings.userName?.trim() || profile?.displayName || 'Aventurier'}
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400">
+                    Niv. {levelInfo.level}
+                  </span>
+                </div>
+                {/* XP progress bar */}
+                <div className="w-full bg-[var(--bg-tertiary)] h-1.5 rounded-full overflow-hidden mb-1.5">
+                  <motion.div
+                    className="bg-gradient-to-r from-[var(--xp-gradient-start)] to-[var(--xp-gradient-end)] h-full rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${levelInfo.progressPercent}%` }}
+                    transition={{ duration: 0.6, ease: 'easeOut' }}
+                  />
+                </div>
+                <div className="flex justify-between text-[10px] text-[var(--text-muted)]">
+                  <span className="flex items-center gap-1 font-medium">
+                    <Sparkles className="w-2.5 h-2.5 text-amber-400" /> {levelInfo.currentLevelXP} /{' '}
+                    {levelInfo.xpForNextLevel} XP
+                  </span>
+                  <span className="font-semibold text-[var(--text-secondary)]">
+                    {profile?.totalXP || 0} total
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Navigation Links */}
           <nav className="space-y-1">
@@ -238,22 +246,25 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       {/* Mobile Top Header (< lg) */}
       <header className="lg:hidden flex items-center justify-between px-4 py-3.5 bg-[var(--bg-elevated)]/80 backdrop-blur-md border-b border-[var(--border-subtle)] sticky top-0 z-30">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white">
-            <Flame className="w-4 h-4 fill-white" />
-          </div>
+          <HabixLogo size={32} />
           <span className="text-lg font-extrabold bg-gradient-to-r from-indigo-400 via-purple-300 to-pink-400 bg-clip-text text-transparent">
             Habix
           </span>
         </div>
 
         <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs font-bold text-indigo-400">
-            <span>Lv.{profile?.currentLevel || 1}</span>
-            <span className="text-[var(--text-muted)] font-normal">•</span>
-            <span className="text-amber-400 flex items-center gap-0.5">
-              <Sparkles className="w-3 h-3" /> {profile?.totalXP || 0}
-            </span>
-          </div>
+          {(() => {
+            const levelInfo = getLevelInfo(profile?.totalXP || 0);
+            return (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs font-bold text-indigo-400">
+                <span>Niv.{levelInfo.level}</span>
+                <span className="text-[var(--text-muted)] font-normal">•</span>
+                <span className="text-amber-400 flex items-center gap-0.5">
+                  <Sparkles className="w-3 h-3" /> {profile?.totalXP || 0} XP
+                </span>
+              </div>
+            );
+          })()}
 
           <button
             onClick={() => setIsShortcutsOpen(true)}

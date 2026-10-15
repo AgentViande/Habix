@@ -55,7 +55,9 @@ export const ReviewPage: React.FC = () => {
           Revue Hebdomadaire
         </h1>
         <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-1">
-          Bilan de vos accomplissements et pistes d'amélioration pour la semaine à venir.
+          Bilan de vos accomplissements
+          {settings.userName?.trim() ? ` pour ${settings.userName.trim()}` : ''} et pistes
+          d'amélioration pour la semaine à venir.
         </p>
       </div>
 

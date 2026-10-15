@@ -5,9 +5,10 @@ import { Button } from '../ui/Button';
 import { Sparkles, Trophy } from 'lucide-react';
 
 export const BadgeUnlockModal: React.FC = () => {
-  const { pendingBadge, dismissBadgeUnlock } = useGamificationStore();
+  const { pendingBadge, levelUpModal, dismissBadgeUnlock } = useGamificationStore();
 
-  if (!pendingBadge) return null;
+  // If level up modal is currently active, wait in queue until it is dismissed
+  if (levelUpModal !== null || !pendingBadge) return null;
 
   return (
     <AnimatePresence>

@@ -11,6 +11,7 @@ import type { Challenge } from '../models/challenge';
 import type { UnlockedBadge } from '../models/badge';
 import type { UserProfile } from '../models/user-profile';
 import type { Settings } from '../models/settings';
+import type { XPEvent } from '../models/xp-event';
 
 export interface ValidatedBackupData {
   habits: Habit[];
@@ -22,6 +23,7 @@ export interface ValidatedBackupData {
   unlockedBadges: UnlockedBadge[];
   userProfile?: UserProfile[];
   settings?: Settings[];
+  xpEvents?: XPEvent[];
 }
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
@@ -273,8 +275,37 @@ export function validateAndSanitizeBackup(raw: unknown): ValidatedBackupData {
           customMoodTags: Array.isArray(s.customMoodTags)
             ? s.customMoodTags.filter((t: unknown) => typeof t === 'string')
             : [],
+          userName: typeof s.userName === 'string' ? s.userName.slice(0, 30).trim() : '',
+          soundEnabled: typeof s.soundEnabled === 'boolean' ? s.soundEnabled : true,
+          soundVolume:
+            typeof s.soundVolume === 'number' && s.soundVolume >= 0 && s.soundVolume <= 1
+              ? s.soundVolume
+              : 0.2,
+          animationsEnabled: typeof s.animationsEnabled === 'boolean' ? s.animationsEnabled : true,
+          showDailyQuote: typeof s.showDailyQuote === 'boolean' ? s.showDailyQuote : true,
         },
       ];
+    }
+  }
+
+  // 10. Sanitize xpEvents (if present)
+  const validXpEvents: XPEvent[] = [];
+  if (Array.isArray(obj.xpEvents)) {
+    for (const x of obj.xpEvents) {
+      if (!x || typeof x !== 'object') continue;
+      if (typeof x.id === 'string' && isValidDateString(x.date) && typeof x.amount === 'number') {
+        validXpEvents.push({
+          id: x.id,
+          date: x.date,
+          amount: x.amount,
+          reason: ['habit_completion', 'perfect_day', 'challenge', 'bonus'].includes(x.reason)
+            ? x.reason
+            : 'bonus',
+          habitId: typeof x.habitId === 'string' ? x.habitId : undefined,
+          habitName: typeof x.habitName === 'string' ? x.habitName.slice(0, 100) : undefined,
+          createdAt: parseDateObject(x.createdAt),
+        });
+      }
     }
   }
 
@@ -288,5 +319,6 @@ export function validateAndSanitizeBackup(raw: unknown): ValidatedBackupData {
     unlockedBadges: validBadges,
     userProfile: validUserProfile,
     settings: validSettings,
+    xpEvents: validXpEvents.length ? validXpEvents : undefined,
   };
 }

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter, HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const isElectron =
   typeof window !== 'undefined' &&
@@ -20,12 +21,46 @@ import { BadgeUnlockModal } from './components/gamification/BadgeUnlockModal';
 import { LevelUpModal } from './components/gamification/LevelUpModal';
 import { UpdateToast } from './components/ui/UpdateToast';
 import { StartupSplash } from './components/ui/StartupSplash';
+import { OnboardingModal } from './components/onboarding/OnboardingModal';
 import { useHabitStore } from './stores/useHabitStore';
 import { useGamificationStore } from './stores/useGamificationStore';
 import { useSettingsStore } from './stores/useSettingsStore';
 import { useMoodStore } from './stores/useMoodStore';
 import { useChallengeStore } from './stores/useChallengeStore';
 import { seedDefaultData } from './db/seed';
+
+const AnimatedRoutes: React.FC = () => {
+  const location = useLocation();
+  const { settings } = useSettingsStore();
+
+  const isReducedMotion =
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const animationsEnabled = (settings.animationsEnabled ?? true) && !isReducedMotion;
+
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={location.pathname}
+        initial={animationsEnabled ? { opacity: 0, y: 8 } : { opacity: 1, y: 0 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={animationsEnabled ? { opacity: 0, y: -8 } : { opacity: 1, y: 0 }}
+        transition={{ duration: animationsEnabled ? 0.22 : 0, ease: [0.22, 1, 0.36, 1] }}
+        className="w-full"
+      >
+        <Routes location={location}>
+          <Route path="/" element={<TodayPage />} />
+          <Route path="/habits" element={<HabitsPage />} />
+          <Route path="/stats" element={<StatsPage />} />
+          <Route path="/challenges" element={<ChallengesPage />} />
+          <Route path="/review" element={<ReviewPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </motion.div>
+    </AnimatePresence>
+  );
+};
 
 export const App: React.FC = () => {
   const [isInitializing, setIsInitializing] = useState(true);
@@ -61,25 +96,19 @@ export const App: React.FC = () => {
     }
   }, [settings.theme]);
 
+  const showOnboarding = !isInitializing && (!settings.userName || settings.userName.trim() === '');
+
   return (
     <Router>
       <AppLayout>
-        <Routes>
-          <Route path="/" element={<TodayPage />} />
-          <Route path="/habits" element={<HabitsPage />} />
-          <Route path="/stats" element={<StatsPage />} />
-          <Route path="/challenges" element={<ChallengesPage />} />
-          <Route path="/review" element={<ReviewPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <AnimatedRoutes />
       </AppLayout>
 
-      {/* Global Gamification, Update Modals & Startup Splash */}
+      {/* Global Gamification, Update Modals, Onboarding & Startup Splash */}
       <BadgeUnlockModal />
       <LevelUpModal />
       <UpdateToast />
+      <OnboardingModal isOpen={showOnboarding} />
       <StartupSplash isLoading={isInitializing} />
     </Router>
   );

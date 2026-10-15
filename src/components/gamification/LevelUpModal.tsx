@@ -1,11 +1,18 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGamificationStore } from '../../stores/useGamificationStore';
 import { Button } from '../ui/Button';
 import { Sparkles, Snowflake, ArrowUp } from 'lucide-react';
+import { sounds } from '../../lib/sounds';
 
 export const LevelUpModal: React.FC = () => {
   const { levelUpModal, dismissLevelUp } = useGamificationStore();
+
+  useEffect(() => {
+    if (levelUpModal !== null) {
+      sounds.playLevelUp();
+    }
+  }, [levelUpModal]);
 
   if (levelUpModal === null) return null;
 
@@ -17,7 +24,7 @@ export const LevelUpModal: React.FC = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/75 backdrop-blur-md"
+          className="fixed inset-0 bg-black/80 backdrop-blur-md"
           onClick={dismissLevelUp}
         />
 
@@ -27,10 +34,32 @@ export const LevelUpModal: React.FC = () => {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 10 }}
           transition={{ type: 'spring', damping: 20, stiffness: 280 }}
-          className="relative w-full max-w-sm bg-[var(--bg-elevated)] border border-indigo-500/40 rounded-3xl p-6 sm:p-7 text-center shadow-2xl shadow-indigo-500/15 z-10 overflow-hidden"
+          className="relative w-full max-w-sm bg-[var(--bg-elevated)] border border-indigo-500/40 rounded-3xl p-6 sm:p-7 text-center shadow-2xl shadow-indigo-500/20 z-10 overflow-hidden"
         >
-          {/* Decorative glow */}
-          <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-48 h-48 bg-indigo-500/30 rounded-full blur-3xl pointer-events-none" />
+          {/* Luminous Pulsing Glow */}
+          <motion.div
+            animate={{ scale: [1, 1.25, 1], opacity: [0.35, 0.65, 0.35] }}
+            transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+            className="absolute -top-24 left-1/2 -translate-x-1/2 w-56 h-56 bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 rounded-full blur-3xl pointer-events-none"
+          />
+
+          {/* Floating Sparkle Particles */}
+          <motion.div
+            initial={{ opacity: 0, y: 0 }}
+            animate={{ opacity: [0, 1, 0], y: [-10, -25], x: [0, 8] }}
+            transition={{ duration: 1.6, repeat: Infinity, delay: 0.1 }}
+            className="absolute top-12 left-10 text-amber-400 pointer-events-none"
+          >
+            <Sparkles className="w-5 h-5 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]" />
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 0 }}
+            animate={{ opacity: [0, 1, 0], y: [-10, -28], x: [0, -8] }}
+            transition={{ duration: 1.8, repeat: Infinity, delay: 0.4 }}
+            className="absolute top-16 right-10 text-pink-400 pointer-events-none"
+          >
+            <Sparkles className="w-4 h-4 drop-shadow-[0_0_8px_rgba(236,72,153,0.6)]" />
+          </motion.div>
 
           <div className="flex justify-center mb-3">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-bold uppercase tracking-wider">
@@ -42,15 +71,18 @@ export const LevelUpModal: React.FC = () => {
             initial={{ scale: 0, rotate: -20 }}
             animate={{ scale: 1, rotate: 0 }}
             transition={{ type: 'spring', delay: 0.15, stiffness: 200 }}
-            className="w-24 h-24 mx-auto rounded-3xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex flex-col items-center justify-center text-white my-4 shadow-xl shadow-indigo-500/30"
+            className="relative w-28 h-28 mx-auto rounded-3xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex flex-col items-center justify-center text-white my-4 shadow-2xl shadow-indigo-500/40 border border-white/20"
           >
             <Sparkles className="w-8 h-8 mb-0.5 text-amber-300" />
-            <span className="text-xl font-black uppercase tracking-tight">Niv. {levelUpModal}</span>
+            <span className="text-2xl font-black uppercase tracking-tight">
+              Niv. {levelUpModal}
+            </span>
           </motion.div>
 
           <h3 className="text-2xl font-black text-[var(--text-primary)] mb-1">Félicitations !</h3>
           <p className="text-xs sm:text-sm text-[var(--text-secondary)] mb-5 max-w-xs mx-auto">
-            Votre constance porte ses fruits. Vous passez au niveau supérieur !
+            Votre constance porte ses fruits. Vous débloquez de nouvelles prouesses et passez au
+            niveau supérieur !
           </p>
 
           {/* Reward badge: +1 freeze day */}

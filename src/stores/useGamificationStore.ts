@@ -6,6 +6,8 @@ import { badgeRepository } from '../db/repositories/badge.repository';
 import { getLevelInfo } from '../services/xp';
 import { evaluateNewBadges, type BadgeEvaluationContext } from '../services/badges';
 import { triggerLevelUpConfetti } from '../utils/confetti';
+import { sounds } from '../lib/sounds';
+import type { XPReason } from '../models/xp-event';
 
 export interface GamificationStoreState {
   profile: UserProfile | null;
@@ -16,7 +18,10 @@ export interface GamificationStoreState {
   isLoading: boolean;
 
   loadGamification: () => Promise<void>;
-  addXP: (amount: number) => Promise<{ newLevel: number; leveledUp: boolean }>;
+  addXP: (
+    amount: number,
+    metadata?: { date?: string; habitId?: string; habitName?: string; reason?: XPReason }
+  ) => Promise<{ newLevel: number; leveledUp: boolean }>;
   selectTitle: (title: string) => Promise<void>;
   unlockBadge: (badgeId: string) => Promise<UnlockedBadge | null>;
   isBadgeUnlocked: (badgeId: string) => boolean;
@@ -69,9 +74,29 @@ export const useGamificationStore = create<GamificationStoreState>((set, get) =>
     set({ profile, unlockedBadges, isLoading: false });
   },
 
-  addXP: async (amount: number) => {
+  addXP: async (
+    amount: number,
+    metadata?: { date?: string; habitId?: string; habitName?: string; reason?: XPReason }
+  ) => {
     const current = get().profile;
     if (!current) return { newLevel: 1, leveledUp: false };
+
+    if (amount > 0) {
+      try {
+        const todayStr = metadata?.date || new Intl.DateTimeFormat('fr-CA').format(new Date());
+        await db.xpEvents.add({
+          id: `xpe-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          date: todayStr,
+          amount,
+          reason: metadata?.reason || 'habit_completion',
+          habitId: metadata?.habitId,
+          habitName: metadata?.habitName,
+          createdAt: new Date(),
+        });
+      } catch (e) {
+        console.warn('Could not record XP event:', e);
+      }
+    }
 
     const newTotalXP = current.totalXP + amount;
     const { level: newLevel } = getLevelInfo(newTotalXP);
@@ -93,6 +118,7 @@ export const useGamificationStore = create<GamificationStoreState>((set, get) =>
     set({ profile: updatedProfile });
 
     if (leveledUp) {
+      sounds.playLevelUp();
       triggerLevelUpConfetti();
       set({ levelUpModal: newLevel });
     }
@@ -198,6 +224,7 @@ export const useGamificationStore = create<GamificationStoreState>((set, get) =>
           pendingBadge: prev.pendingBadge || queue[0],
         };
       });
+      sounds.playMilestone();
       triggerLevelUpConfetti();
     }
 
